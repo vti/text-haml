@@ -1,0 +1,557 @@
+package Text::Haml;
+
+use strict;
+use warnings;
+
+our $VERSION = '0.010101';
+
+sub new {
+    my $class = shift;
+
+    # Default attributes
+    my $attrs = {};
+    $attrs->{format}      = 'xhtml';
+    $attrs->{tape}        = [];
+    $attrs->{encoding}    = 'utf-8';
+    $attrs->{escape_html} = 1;
+    $attrs->{helpers}     = {};
+    $attrs->{prepend}     = '';
+    $attrs->{append}      = '';
+    $attrs->{namespace}   = '';
+    $attrs->{escape}      = <<'EOF';
+    my $s = shift;
+    $s =~ s/&/&amp;/g;
+    $s =~ s/</&lt;/g;
+    $s =~ s/>/&gt;/g;
+    $s =~ s/"/&quot;/g;
+    $s =~ s/'/&apos;/g;
+    return $s;
+EOF
+
+    my $self = {%$attrs, @_};
+    bless $self, $class;
+
+    return $self;
+}
+
+# Yes, i know!
+sub format   { @_ > 1 ? $_[0]->{format}   = $_[1] : $_[0]->{format} }
+sub tape     { @_ > 1 ? $_[0]->{tape}     = $_[1] : $_[0]->{tape} }
+sub encoding { @_ > 1 ? $_[0]->{encoding} = $_[1] : $_[0]->{encoding} }
+
+sub escape_html {
+    @_ > 1
+      ? $_[0]->{escape_html} = $_[1]
+      : $_[0]->{escape_html};
+}
+sub code     { @_ > 1 ? $_[0]->{code}     = $_[1] : $_[0]->{code} }
+sub compiled { @_ > 1 ? $_[0]->{compiled} = $_[1] : $_[0]->{compiled} }
+sub helpers  { @_ > 1 ? $_[0]->{helpers}  = $_[1] : $_[0]->{helpers} }
+sub prepend  { @_ > 1 ? $_[0]->{prepend}  = $_[1] : $_[0]->{prepend} }
+sub append   { @_ > 1 ? $_[0]->{append}   = $_[1] : $_[0]->{append} }
+sub escape   { @_ > 1 ? $_[0]->{escape}   = $_[1] : $_[0]->{escape} }
+
+sub namespace {
+    @_ > 1
+      ? $_[0]->{namespace} = $_[1]
+      : $_[0]->{namespace};
+}
+
+our @AUTOCLOSE = (qw/meta img link br hr input area param col base/);
+
+sub add_helper {
+    my $self = shift;
+    my ($name, $code) = @_;
+
+    $self->helpers->{$name} = $code;
+}
+
+sub parse {
+    my $self = shift;
+    my $tmpl = shift;
+
+    $tmpl = '' unless defined $tmpl;
+
+    $self->tape([]);
+
+    my $level_token      = quotemeta ' ';
+    my $escape_token     = quotemeta '&';
+    my $unescape_token   = quotemeta '!';
+    my $expr_token       = quotemeta '=';
+    my $tag_start        = quotemeta '%';
+    my $class_start      = quotemeta '.';
+    my $id_start         = quotemeta '#';
+    my $attributes_start = quotemeta '{';
+    my $attributes_end   = quotemeta '}';
+    my $quote            = "'";
+    my $comment_token    = quotemeta '-#';
+    my $trim_in          = quotemeta '<';
+    my $trim_out         = quotemeta '>';
+
+    my $tape = $self->tape;
+
+    my $level;
+    my @lines = split /\n/, $tmpl;
+    push @lines, '' if $tmpl =~ m/\n$/;
+    @lines = ('') if $tmpl eq "\n";
+    for my $line (@lines) {
+        if ($line =~ s/^($level_token+)//) {
+            $level = length $1;
+        }
+        else {
+            $level = 0;
+        }
+
+        my $el = {level => $level, type => 'text', line => $line};
+
+        # Haml comment
+        if ($line =~ m/^$comment_token(?: (.*))?/) {
+            $el->{type} = 'comment';
+            $el->{text} = $1 if $1;
+            push @$tape, $el;
+            next;
+        }
+
+        # Doctype
+        if ($line =~ m/^!!!(?: ([^ ]+)(?: (.*))?)?$/) {
+            $el->{type} = 'text';
+            $el->{text} = $self->_doctype($1, $2);
+            push @$tape, $el;
+            next;
+        }
+
+        # HTML comment
+        if ($line =~ m/^\/(?:\[if (.*)?\])?(?: (.*))?/) {
+            $el->{type} = 'html_comment';
+            $el->{if} = $1 if $1;
+            $el->{text} = $2 if $2;
+            push @$tape, $el;
+            next;
+        }
+
+        # Escaping, everything after is a text
+        if ($line =~ s/^\\//) {
+            $el->{type} = 'text',
+            $el->{text} = $line;
+            push @$tape, $el;
+            next;
+        }
+
+        # Block
+        if ($line =~ s/^- \s*(.*)//) {
+            $el->{type} = 'block';
+            $el->{text} = $1;
+            push @$tape, $el;
+            next;
+        }
+
+        # Preserve whitespace
+        if ($line =~ s/^~ \s*(.*)//) {
+            $el->{type} = 'text';
+            $el->{text} = $1;
+            $el->{expr} = 1;
+            $el->{preserve_whitespace} = 1;
+            push @$tape, $el;
+            next;
+        }
+
+        # Tag
+        if ($line =~ m/^(?:$tag_start
+            |$class_start
+            |$id_start
+            |$attributes_start
+            |$escape_token
+            |$unescape_token
+            |$expr_token)/x
+          )
+        {
+            if ($line =~ s/^$tag_start([^ {.<>#!&=\/]+)//) {
+                $el->{type} = 'tag';
+                $el->{name} = $1;
+            }
+
+            if ($line =~ s/^\.([^ {}#!&=<>\/]+)//) {
+                my $class = join(' ', split(/\./, $1));
+
+                $el->{type} = 'tag';
+                $el->{name} ||= 'div';
+                $el->{tail} ||= '';
+                $el->{tail} .= qq| class=$quote$class$quote|;
+            }
+
+            if ($line =~ s/^\#([^ {}!&=<>\/]+)//) {
+                my $id = $1;
+
+                $el->{type} = 'tag';
+                $el->{name} ||= 'div';
+                $el->{tail} ||= '';
+                $el->{tail} .= qq| id=$quote$id$quote|;
+            }
+
+            if ($line =~ s/$attributes_start(.*?)$attributes_end//) {
+                my $attrs = $1;
+
+                my @attr = split(/\s*,\s*/, $attrs);
+                $attrs = ' ';
+                foreach my $attr (@attr) {
+                    my $name;
+                    if ($attr =~ s/^\s*('|")(.*?)\1\s*=>//x) {
+                        $name = $2;
+                    }
+                    elsif ($attr =~ s/^\s*:?([^ ]+)\s*=>//x) {
+                        $name = $1;
+                    }
+                    else {
+                        next;
+                    }
+                    $attr =~ s/^\s*('|")(.*?)\1\s*$//x || next;
+                    $attrs .= "$name=$quote$2$quote ";
+                }
+                $attrs =~ s/\s+$//;
+
+                $el->{type} = 'tag';
+                $el->{tail} ||= '';
+                $el->{tail} .= $attrs;
+            }
+
+            if ($line =~ s/^$trim_out ?//) {
+                $el->{trim_out} = 1;
+            }
+
+            if ($line =~ s/^$trim_in ?//) {
+                $el->{trim_in} = 1;
+            }
+
+            if ($line =~ s/^($escape_token|$unescape_token)?$expr_token //) {
+                $el->{expr} = 1;
+                if ($1) {
+                    $el->{escape} = quotemeta($1) eq $escape_token ? 1 : 0;
+                }
+            }
+        }
+
+        if ($el->{type} eq 'tag'
+            && ($line =~ s/\/$// || grep { $el->{name} eq $_ } @AUTOCLOSE))
+        {
+            $el->{autoclose} = 1;
+        }
+
+        $line =~ s/^ // if $line;
+
+        # Multiline
+        if ($line && $line =~ s/(\s*)\|$//) {
+
+            # For the first time
+            if (!$tape->[-1] || ref $tape->[-1]->{text} ne 'ARRAY') {
+                $el->{text} = [$line];
+                $el->{line} = $el->{line} . "\n" || $line . "$1|\n";
+
+                push @$tape, $el;
+            }
+
+            # Continue concatenation
+            else {
+                my $prev_el = $tape->[-1];
+                push @{$prev_el->{text}}, $line;
+                $prev_el->{line} .= $line . "$1|\n";
+            }
+        }
+
+        # For the last time
+        elsif ($tape->[-1] && ref $tape->[-1]->{text} eq 'ARRAY') {
+            $tape->[-1]->{text} = join(" ", @{$tape->[-1]->{text}}, $line);
+            $tape->[-1]->{line} .= $line;
+        }
+
+        # Normal text
+        else {
+            $el->{text} = $line if $line;
+
+            push @$tape, $el;
+        }
+    }
+}
+
+sub build {
+    my $self = shift;
+    my %vars = @_;
+
+    my $code;
+
+    my $ESCAPE = $self->escape;
+    $ESCAPE = <<"EOF";
+no strict 'refs'; no warnings 'redefine';
+sub escape;
+*escape = sub {
+    $ESCAPE
+};
+use strict; use warnings;
+EOF
+
+    $ESCAPE =~ s/\n//g;
+
+    my $namespace = $self->namespace || ref($self) . '::template';
+    $code .= qq/package $namespace; $ESCAPE; sub { my \$_H = ''; /;
+
+    # Embed variables
+    foreach my $var (sort keys %vars) {
+        $code .= qq/my \$$var = "$vars{$var}";/;
+    }
+
+    $code .= $self->prepend;
+
+    # Install helpers
+    for my $name (sort keys %{$self->helpers}) {
+        next unless $name =~ m/^\w+$/;
+
+        $code .= "sub $name;";
+        $code .= " *$name = sub { \$self";
+        $code .= "->helpers->{'$name'}->(\$self, \@_) };";
+    }
+
+    my $stack = [];
+
+    my @lines;
+    my $count = 0;
+    for my $el (@{$self->tape}) {
+        my $offset = '';
+        $offset .= ' ' x $el->{level};
+
+        my $prev_el = $stack->[-1];
+
+        if ($prev_el && $prev_el->{type} eq 'comment') {
+            if ($prev_el->{level} == $el->{level}) {
+                pop @$stack;
+            }
+            else {
+                next;
+            }
+        }
+
+        if ($el->{line} && $prev_el && $prev_el->{level} >= $el->{level}) {
+            while (my $poped = pop @$stack) {
+                my $poped_offset = ' ' x $poped->{level};
+
+                my $ending = '';
+                if ($poped->{type} eq 'tag') {
+                    $ending .= "</$poped->{name}>";
+                }
+                elsif ($poped->{type} eq 'html_comment') {
+                    $ending .= "<![endif]" if $poped->{if};
+                    $ending .= "-->";
+                }
+                push @lines, qq|\$_H .= "$poped_offset$ending\n";|;
+
+                last if $poped->{level} == $el->{level};
+            }
+        }
+
+        my $output = '';
+        if ($el->{type} eq 'tag') {
+            $el->{tail} ||= '';
+            $el->{tail} .= ' /' if $el->{autoclose};
+            $el->{closed} = 1;
+            $output .= qq|"$offset<$el->{name}$el->{tail}>"|;
+
+            if ($el->{text} && $el->{expr}) {
+                $output .= '. ' . $el->{text};
+                $output .= qq| . "</$el->{name}>"|;
+            }
+            elsif ($el->{text}) {
+                $output .= '. "' . quotemeta($el->{text}) . '"';
+                $output .= qq|. "</$el->{name}>"| unless $el->{autoclose};
+            }
+            elsif ($self->tape->[$count + 1]
+                && $self->tape->[$count + 1]->{level} == $el->{level})
+            {
+                $output .= qq|. "</$el->{name}>"| unless $el->{autoclose};
+            }
+            elsif (!$el->{autoclose}) {
+                $el->{closed} = 0;
+                push @$stack, $el;
+            }
+
+            #push @$stack, $el;
+
+            $output .= qq|. "\n"|;
+            $output .= qq|;|;
+        }
+        elsif ($el->{type} eq 'text') {
+            $output = qq/"$offset"/;
+
+            $el->{text} = '' unless defined $el->{text};
+
+            if ($el->{expr}) {
+                my $escape = '';
+                if ((!exists $el->{escape} && $self->escape_html) || (exists
+                        $el->{escape} && $el->{escape} == 1)) {
+                    $escape = 'escape' 
+                }
+
+                $output .= qq/. $escape / . +$el->{text};
+                $output .= qq/;\$_H .= "\n"/;
+            }
+            elsif ($el->{text}) {
+                $output .= qq/. "/ . quotemeta($el->{text}) . '"';
+                $output .= qq/. "\n"/;
+            }
+
+            $output .= qq/;/;
+        }
+        elsif ($el->{type} eq 'block') {
+            push @lines, $el->{text};
+        }
+        elsif ($el->{type} eq 'html_comment') {
+            $output = qq/"$offset"/;
+
+            $output .= qq/ . "<!--"/;
+            $output .= qq/ . "[if $el->{if}]>"/ if $el->{if};
+
+            if ($el->{text}) {
+                $output .= qq/. " $el->{text} -->\n"/;
+            }
+            else {
+                $output .= qq/. "\n"/;
+                push @$stack, $el;
+            }
+
+            $output .= qq/;/;
+        }
+        elsif ($el->{type} eq 'comment') {
+            push @$stack, $el;
+        }
+        else {
+            die "unknown type=" . $el->{type};
+        }
+
+        push @lines, '$_H .= ' . $output if $output;
+
+        $count++;
+    }
+
+    my $last_empty_line = 0;
+    $last_empty_line = 1
+      if $self->tape->[-1] && $self->tape->[-1]->{line} eq '';
+
+    foreach my $el (reverse @$stack) {
+        my $offset = ' ' x $el->{level};
+        my $ending = '';
+        if ($el->{type} eq 'tag') {
+            $ending = "</$el->{name}>";
+        }
+        elsif ($el->{type} eq 'html_comment') {
+            $ending .= '<![endif]' if $el->{if};
+            $ending .= "-->";
+        }
+
+        push @lines, qq|\$_H .= "$offset$ending\n";|;
+    }
+
+    $lines[-1] =~ s/\n";$/";/ unless $last_empty_line;
+
+    $code .= join("\n", @lines);
+
+    $code .= $self->append;
+
+    $code .= q/return $_H; };/;
+
+    $self->code($code);
+    return $self;
+}
+
+sub compile {
+    my $self = shift;
+
+    my $code = $self->code;
+    return unless $code;
+
+    my $compiled = eval $code;
+    die $@ if $@;
+
+    $self->compiled($compiled);
+
+    return $self;
+}
+
+sub interpret {
+    my $self = shift;
+
+    my $compiled = $self->compiled;
+
+    my $output = eval { $compiled->() };
+
+    die $@ if $@;
+
+    return $output;
+}
+
+sub render {
+    my $self = shift;
+    my $tmpl = shift;
+
+    # Parse
+    $self->parse($tmpl);
+
+    # Build
+    $self->build(@_);
+
+    # Compile
+    $self->compile;
+
+    # Interpret
+    return $self->interpret;
+}
+
+sub _doctype {
+    my $self = shift;
+    my ($type, $encoding) = @_;
+
+    $type ||= '';
+    $encoding ||= 'utf-8';
+
+    if ($type eq 'XML') {
+        return qq|<?xml version='1.0' encoding='$encoding' ?>|;
+    }
+
+    if ($self->format eq 'xhtml') {
+        if ($type eq 'Strict') {
+            return q|<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">|;
+        }
+        elsif ($type eq 'Frameset') {
+            return q|<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Frameset//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-frameset.dtd">|;
+        }
+        elsif ($type eq '5') {
+            return '<!DOCTYPE html>';
+        }
+        elsif ($type eq '1.1') {
+            return q|<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">|;
+        }
+        elsif ($type eq 'Basic') {
+            return q|<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML Basic 1.1//EN" "http://www.w3.org/TR/xhtml-basic/xhtml-basic11.dtd">|;
+        }
+        elsif ($type eq 'Mobile') {
+            return q|<!DOCTYPE html PUBLIC "-//WAPFORUM//DTD XHTML Mobile 1.2//EN" "http://www.openmobilealliance.org/tech/DTD/xhtml-mobile12.dtd">|;
+        }
+        else {
+            return q|<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">|;
+        }
+    }
+    elsif ($self->format eq 'html4') {
+        if ($type eq 'Strict') {
+            return q|<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">|;
+        }
+        elsif ($type eq 'Frameset') {
+            return q|<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Frameset//EN" "http://www.w3.org/TR/html4/frameset.dtd">|;
+        }
+        else {
+            return q|<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">|;
+        }
+    }
+    elsif ($self->format eq 'html5') {
+        return '<!DOCTYPE html>';
+    }
+
+    return '';
+}
+
+1;
