@@ -3,20 +3,27 @@
 use strict;
 use warnings;
 
-use Test::More tests => 1;
+use Test::More tests => 2;
 
 use Text::Haml;
 
 my $haml = Text::Haml->new;
 
 # Attributes: {} or ()
-# TODO should be <html ...></html>
 
 my $output = $haml->render(<<'EOF');
 %html{xmlns => "http://www.w3.org/1999/xhtml", "xml:lang" => "en", lang => "en"}
 EOF
-is($output, <<'EOF')
+is($output, <<'EOF');
 <html xmlns='http://www.w3.org/1999/xhtml' xml:lang='en' lang='en'></html>
+EOF
+
+$output = $haml->render(<<'EOF');
+- my $link = 'http://foo.bar';
+%a{href => $link} FooBar
+EOF
+is($output, <<'EOF')
+<a href='http://foo.bar'>FooBar</a>
 EOF
 
 #$output = $haml->render(<<'EOF');

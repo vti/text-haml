@@ -38,6 +38,7 @@ $haml->parse(<<'EOF');
   %whiz.class.class2#id{foo => 'bar'}
     %baz= 1 + 2
       Wow this is cool!
+      %a{href => 'foo', name => helper} Link
 EOF
 is_deeply(
     $haml->tape,
@@ -45,7 +46,8 @@ is_deeply(
         {   type  => 'tag',
             level => 2,
             name  => 'whiz',
-            tail  => q| class='class class2' id='id' foo='bar'|,
+            tail  => q| class='class class2' id='id'|,
+            attrs => [foo => {type => 'text', text => 'bar'}],
             line  => "%whiz.class.class2#id{foo => 'bar'}"
         },
         {   type  => 'tag',
@@ -59,6 +61,19 @@ is_deeply(
             level => 6,
             text  => 'Wow this is cool!',
             line  => 'Wow this is cool!'
+        },
+        {   type  => 'tag',
+            level => 6,
+            name  => 'a',
+            attrs => [
+                href => {type => 'text', text => 'foo'},
+                name => {
+                    type => 'expr',
+                    text => 'helper'
+                }
+            ],
+            text => 'Link',
+            line => "%a{href => 'foo', name => helper} Link"
         },
         {   type  => 'text',
             level => 0,
@@ -214,6 +229,8 @@ is_deeply(
 $haml->parse(<<'EOF');
 = 1 + 2
 - "foo"
+= $foo->{bar}
+%p= $i
 EOF
 is_deeply(
     $haml->tape,
@@ -227,6 +244,19 @@ is_deeply(
             level => 0,
             text  => '"foo"',
             line  => '- "foo"'
+        },
+        {   type  => 'text',
+            level => 0,
+            expr  => 1,
+            text  => '$foo->{bar}',
+            line  => '= $foo->{bar}'
+        },
+        {   type  => 'tag',
+            level => 0,
+            name => 'p',
+            expr  => 1,
+            text  => '$i',
+            line  => '%p= $i'
         },
         {   type  => 'text',
             level => 0,

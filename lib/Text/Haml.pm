@@ -3,7 +3,13 @@ package Text::Haml;
 use strict;
 use warnings;
 
-our $VERSION = '0.010101';
+use IO::File;
+use Scalar::Util qw/weaken/;
+use Encode qw/decode/;
+
+our $VERSION = '0.010201';
+
+use constant CHUNK_SIZE => 4096;
 
 sub new {
     my $class = shift;
@@ -18,6 +24,7 @@ sub new {
     $attrs->{prepend}     = '';
     $attrs->{append}      = '';
     $attrs->{namespace}   = '';
+    $attrs->{vars}        = {};
     $attrs->{escape}      = <<'EOF';
     my $s = shift;
     $s =~ s/&/&amp;/g;
@@ -30,6 +37,9 @@ EOF
 
     my $self = {%$attrs, @_};
     bless $self, $class;
+
+    $self->{helpers_arg} ||= $self;
+    weaken $self->{helpers_arg};
 
     return $self;
 }
@@ -47,9 +57,12 @@ sub escape_html {
 sub code     { @_ > 1 ? $_[0]->{code}     = $_[1] : $_[0]->{code} }
 sub compiled { @_ > 1 ? $_[0]->{compiled} = $_[1] : $_[0]->{compiled} }
 sub helpers  { @_ > 1 ? $_[0]->{helpers}  = $_[1] : $_[0]->{helpers} }
+sub helpers_arg  { @_ > 1 ? $_[0]->{helpers_arg}  = $_[1] :
+    $_[0]->{helpers_arg} }
 sub prepend  { @_ > 1 ? $_[0]->{prepend}  = $_[1] : $_[0]->{prepend} }
 sub append   { @_ > 1 ? $_[0]->{append}   = $_[1] : $_[0]->{append} }
 sub escape   { @_ > 1 ? $_[0]->{escape}   = $_[1] : $_[0]->{escape} }
+sub vars   { @_ > 1 ? $_[0]->{vars}   = $_[1] : $_[0]->{vars} }
 
 sub namespace {
     @_ > 1
@@ -162,7 +175,7 @@ sub parse {
             |$attributes_start
             |$escape_token
             |$unescape_token
-            |$expr_token)/x
+            )/x
           )
         {
             if ($line =~ s/^$tag_start([^ {.<>#!&=\/]+)//) {
@@ -192,7 +205,7 @@ sub parse {
                 my $attrs = $1;
 
                 my @attr = split(/\s*,\s*/, $attrs);
-                $attrs = ' ';
+                $attrs = [];
                 foreach my $attr (@attr) {
                     my $name;
                     if ($attr =~ s/^\s*('|")(.*?)\1\s*=>//x) {
@@ -204,14 +217,20 @@ sub parse {
                     else {
                         next;
                     }
-                    $attr =~ s/^\s*('|")(.*?)\1\s*$//x || next;
-                    $attrs .= "$name=$quote$2$quote ";
+
+                    if ($attr =~ s/^\s*('|")(.*?)\1\s*$//x) {
+                        push @$attrs, $name => {type => 'text', text => $2};
+                    }
+                    elsif ($attr =~ s/^\s*([^ ]+)\s*$//x) {
+                        push @$attrs, $name => {type => 'expr', text => $1};
+                    }
+                    else {
+                        next;
+                    }
                 }
-                $attrs =~ s/\s+$//;
 
                 $el->{type} = 'tag';
-                $el->{tail} ||= '';
-                $el->{tail} .= $attrs;
+                $el->{attrs} = $attrs if @$attrs;
             }
 
             if ($line =~ s/^$trim_out ?//) {
@@ -221,12 +240,12 @@ sub parse {
             if ($line =~ s/^$trim_in ?//) {
                 $el->{trim_in} = 1;
             }
+        }
 
-            if ($line =~ s/^($escape_token|$unescape_token)?$expr_token //) {
-                $el->{expr} = 1;
-                if ($1) {
-                    $el->{escape} = quotemeta($1) eq $escape_token ? 1 : 0;
-                }
+        if ($line =~ s/^($escape_token|$unescape_token)?$expr_token //) {
+            $el->{expr} = 1;
+            if ($1) {
+                $el->{escape} = quotemeta($1) eq $escape_token ? 1 : 0;
             }
         }
 
@@ -295,7 +314,7 @@ EOF
 
     # Embed variables
     foreach my $var (sort keys %vars) {
-        $code .= qq/my \$$var = "$vars{$var}";/;
+        $code .= qq/my \$$var = \$self->vars->{$var};/;
     }
 
     $code .= $self->prepend;
@@ -306,7 +325,7 @@ EOF
 
         $code .= "sub $name;";
         $code .= " *$name = sub { \$self";
-        $code .= "->helpers->{'$name'}->(\$self, \@_) };";
+        $code .= "->helpers->{'$name'}->(\$self->helpers_arg, \@_) };";
     }
 
     my $stack = [];
@@ -349,9 +368,25 @@ EOF
         my $output = '';
         if ($el->{type} eq 'tag') {
             $el->{tail} ||= '';
-            $el->{tail} .= ' /' if $el->{autoclose};
-            $el->{closed} = 1;
-            $output .= qq|"$offset<$el->{name}$el->{tail}>"|;
+            my $ending = $el->{autoclose} ? ' /' : '';
+
+            my $attrs = '';
+            if ($el->{attrs}) {
+                for (my $i = 0; $i < @{$el->{attrs}}; $i += 2) {
+                    $attrs .= ' ';
+                    $attrs .= $el->{attrs}->[$i];
+                    $attrs .= '=';
+                    my $text = $el->{attrs}->[$i + 1]->{text};
+                    if ($el->{attrs}->[$i + 1]->{type} eq 'text') {
+                        $attrs .= "'$text'";
+                    }
+                    else {
+                        $attrs .= qq/'" . $text . "'/;
+                    }
+                }
+            }
+
+            $output .= qq|"$offset<$el->{name}$el->{tail}$attrs$ending>"|;
 
             if ($el->{text} && $el->{expr}) {
                 $output .= '. ' . $el->{text};
@@ -367,11 +402,8 @@ EOF
                 $output .= qq|. "</$el->{name}>"| unless $el->{autoclose};
             }
             elsif (!$el->{autoclose}) {
-                $el->{closed} = 0;
                 push @$stack, $el;
             }
-
-            #push @$stack, $el;
 
             $output .= qq|. "\n"|;
             $output .= qq|;|;
@@ -447,7 +479,9 @@ EOF
         push @lines, qq|\$_H .= "$offset$ending\n";|;
     }
 
-    $lines[-1] =~ s/\n";$/";/ unless $last_empty_line;
+    if ($lines[-1]) {
+        $lines[-1] =~ s/\n";$/";/ unless $last_empty_line;
+    }
 
     $code .= join("\n", @lines);
 
@@ -476,6 +510,8 @@ sub compile {
 sub interpret {
     my $self = shift;
 
+    $self->vars({@_});
+
     my $compiled = $self->compiled;
 
     my $output = eval { $compiled->() };
@@ -499,7 +535,29 @@ sub render {
     $self->compile;
 
     # Interpret
-    return $self->interpret;
+    return $self->interpret(@_);
+}
+
+sub render_file {
+    my $self = shift;
+    my $path = shift;
+
+    # Open file
+    my $file = IO::File->new;
+    $file->open("< $path") or die "Can't open template '$path': $!";
+    binmode $file, ':utf8';
+
+    # Slurp file
+    my $tmpl = '';
+    while ($file->sysread(my $buffer, CHUNK_SIZE, 0)) {
+        $tmpl .= $buffer;
+    }
+
+    # Encoding
+    $tmpl = decode($self->encoding, $tmpl) if $self->encoding;
+
+    # Render
+    return $self->render($tmpl, @_);
 }
 
 sub _doctype {
