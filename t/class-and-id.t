@@ -5,7 +5,7 @@ use warnings;
 
 use Text::Haml;
 
-use Test::More tests => 2;
+use Test::More tests => 4;
 
 my $haml = Text::Haml->new;
 
@@ -41,4 +41,22 @@ is($output, <<'EOF');
     </div>
   </div>
 </div>
+EOF
+
+$output = $haml->render(<<'EOF');
+%foo{id=>'bar'}
+%bar#baz{id=>'1'}
+EOF
+is($output, <<'EOF');
+<foo id='bar'></foo>
+<bar id='baz_1'></bar>
+EOF
+
+$output = $haml->render(<<'EOF');
+%foo{class=>'bar'}
+%bar.baz{class=>'bar'}
+EOF
+is($output, <<'EOF');
+<foo class='bar'></foo>
+<bar class='bar baz'></bar>
 EOF

@@ -59,5 +59,6 @@ $output = $haml->render('!!!');
 is($output, '<!DOCTYPE html>');
 
 # Encoding
+$haml->format('xhtml');
 $output = $haml->render('!!! XML iso-8859-1');
 is($output, q|<?xml version='1.0' encoding='iso-8859-1' ?>|);

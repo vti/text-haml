@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 
-use Test::More tests => 2;
+use Test::More tests => 3;
 
 use Text::Haml;
 
@@ -31,4 +31,13 @@ is($output, <<'EOF');
 <meta http-equiv='Content-Type' content='text/html' />
 <hr />
 <img src='logo.jpg' />
+EOF
+
+# No / in HTML
+$haml->format('html');
+$output = $haml->render(<<'EOF');
+%br
+EOF
+is($output, <<'EOF');
+<br>
 EOF

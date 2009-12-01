@@ -16,11 +16,11 @@ sub new {
 
     # Default attributes
     my $attrs = {};
-    $attrs->{format}      = 'xhtml';
     $attrs->{tape}        = [];
     $attrs->{encoding}    = 'utf-8';
     $attrs->{escape_html} = 1;
     $attrs->{helpers}     = {};
+    $attrs->{format}      = 'xhtml';
     $attrs->{prepend}     = '';
     $attrs->{append}      = '';
     $attrs->{namespace}   = '';
@@ -34,6 +34,19 @@ sub new {
     $s =~ s/'/&apos;/g;
     return $s;
 EOF
+
+    $attrs->{filters} = {
+        plain    => sub { $_[0] =~ s/\n*$//; $_[0] },
+        escaped  => sub { $_[0] },
+        preserve => sub { $_[0] =~ s/\n/&#x000A;/g; $_[0] },
+        javascript => sub {
+            "<script type='text/javascript'>\n"
+              . "  //<![CDATA[\n"
+              . "    $_[0]\n"
+              . "  //]]>\n"
+              . "</script>";
+        },
+    };
 
     my $self = {%$attrs, @_};
     bless $self, $class;
@@ -59,6 +72,7 @@ sub compiled { @_ > 1 ? $_[0]->{compiled} = $_[1] : $_[0]->{compiled} }
 sub helpers  { @_ > 1 ? $_[0]->{helpers}  = $_[1] : $_[0]->{helpers} }
 sub helpers_arg  { @_ > 1 ? $_[0]->{helpers_arg}  = $_[1] :
     $_[0]->{helpers_arg} }
+sub filters  { @_ > 1 ? $_[0]->{filters}  = $_[1] : $_[0]->{filters} }
 sub prepend  { @_ > 1 ? $_[0]->{prepend}  = $_[1] : $_[0]->{prepend} }
 sub append   { @_ > 1 ? $_[0]->{append}   = $_[1] : $_[0]->{append} }
 sub escape   { @_ > 1 ? $_[0]->{escape}   = $_[1] : $_[0]->{escape} }
@@ -69,6 +83,7 @@ sub namespace {
       ? $_[0]->{namespace} = $_[1]
       : $_[0]->{namespace};
 }
+sub error { @_ > 1 ? $_[0]->{error} = $_[1] : $_[0]->{error} }
 
 our @AUTOCLOSE = (qw/meta img link br hr input area param col base/);
 
@@ -77,6 +92,13 @@ sub add_helper {
     my ($name, $code) = @_;
 
     $self->helpers->{$name} = $code;
+}
+
+sub add_filter {
+    my $self = shift;
+    my ($name, $code) = @_;
+
+    $self->filters->{$name} = $code;
 }
 
 sub parse {
@@ -96,6 +118,9 @@ sub parse {
     my $id_start         = quotemeta '#';
     my $attributes_start = quotemeta '{';
     my $attributes_end   = quotemeta '}';
+    my $attributes_start2= quotemeta '(';
+    my $attributes_end2  = quotemeta ')';
+    my $filter_token     = quotemeta ':';
     my $quote            = "'";
     my $comment_token    = quotemeta '-#';
     my $trim_in          = quotemeta '<';
@@ -107,7 +132,9 @@ sub parse {
     my @lines = split /\n/, $tmpl;
     push @lines, '' if $tmpl =~ m/\n$/;
     @lines = ('') if $tmpl eq "\n";
-    for my $line (@lines) {
+    for (my $i = 0; $i < @lines; $i++) {
+        my $line = $lines[$i];
+
         if ($line =~ s/^($level_token+)//) {
             $level = length $1;
         }
@@ -121,6 +148,27 @@ sub parse {
         if ($line =~ m/^$comment_token(?: (.*))?/) {
             $el->{type} = 'comment';
             $el->{text} = $1 if $1;
+            push @$tape, $el;
+            next;
+        }
+
+        # Inside a filter
+        my $prev = $tape->[-1];
+        if ($prev && $prev->{type} eq 'filter') {
+            if ($prev->{level} < $el->{level} || ($i + 1 < @lines && $line eq ''))
+            {
+                $prev->{text} .= "\n" if $prev->{text};
+                $prev->{text} .= $line;
+                $prev->{line} .= "\n" . (' ' x $el->{level}) . $el->{line};
+                next;
+            }
+        }
+
+        # Filter
+        if ($line =~ m/^:(.*)/) {
+            $el->{type} = 'filter';
+            $el->{name} = $1;
+            $el->{text} = '';
             push @$tape, $el;
             next;
         }
@@ -173,32 +221,36 @@ sub parse {
             |$class_start
             |$id_start
             |$attributes_start
+            |$attributes_start2
             |$escape_token
             |$unescape_token
             )/x
           )
         {
-            if ($line =~ s/^$tag_start([^ {.<>#!&=\/]+)//) {
+            if ($line =~ s/^$tag_start([^ \({.<>#!&=\/]+)//) {
                 $el->{type} = 'tag';
                 $el->{name} = $1;
             }
 
-            if ($line =~ s/^\.([^ {}#!&=<>\/]+)//) {
-                my $class = join(' ', split(/\./, $1));
+            while (1) {
+                if ($line =~ s/^\.([^ \({#\.!&=<>\/]+)//) {
+                    my $class = join(' ', split(/\./, $1));
 
-                $el->{type} = 'tag';
-                $el->{name} ||= 'div';
-                $el->{tail} ||= '';
-                $el->{tail} .= qq| class=$quote$class$quote|;
-            }
+                    $el->{type} = 'tag';
+                    $el->{name} ||= 'div';
+                    $el->{class} ||= [];
+                    push @{$el->{class}},$class;
+                }
+                elsif ($line =~ s/^\#([^ \({#\.!&=<>\/]+)//) {
+                    my $id = $1;
 
-            if ($line =~ s/^\#([^ {}!&=<>\/]+)//) {
-                my $id = $1;
-
-                $el->{type} = 'tag';
-                $el->{name} ||= 'div';
-                $el->{tail} ||= '';
-                $el->{tail} .= qq| id=$quote$id$quote|;
+                    $el->{type} = 'tag';
+                    $el->{name} ||= 'div';
+                    $el->{id} = $id;
+                }
+                else {
+                    last;
+                }
             }
 
             if ($line =~ s/$attributes_start(.*?)$attributes_end//) {
@@ -226,6 +278,26 @@ sub parse {
                     }
                     else {
                         next;
+                    }
+                }
+
+                $el->{type} = 'tag';
+                $el->{attrs} = $attrs if @$attrs;
+            }
+
+            if ($line =~ s/$attributes_start2(.*?)$attributes_end2//) {
+                my $list = $1;
+
+                my $attrs = [];
+                while (1) {
+                    if ($list =~ s/^\s*(.*?)\s*=\s*('|")(.*?)\2\s*//) {
+                        push @$attrs, $1 => {type => 'text', text => $3};
+                    }
+                    elsif ($list =~ s/^\s*(.*?)\s*=\s*([^ ]+)\s*//) {
+                        push @$attrs, $1 => {type => 'expr', text => $2};
+                    }
+                    else {
+                        last;
                     }
                 }
 
@@ -367,12 +439,24 @@ EOF
 
         my $output = '';
         if ($el->{type} eq 'tag') {
-            $el->{tail} ||= '';
-            my $ending = $el->{autoclose} ? ' /' : '';
+            my $ending =
+              $el->{autoclose} && $self->format eq 'xhtml' ? ' /' : '';
 
             my $attrs = '';
             if ($el->{attrs}) {
                 for (my $i = 0; $i < @{$el->{attrs}}; $i += 2) {
+                    if ($el->{attrs}->[$i] eq 'class') {
+                        $el->{class} ||= [];
+                        unshift @{$el->{class}}, $el->{attrs}->[$i + 1]->{text};
+                        next;
+                    }
+                    elsif ($el->{attrs}->[$i] eq 'id') {
+                        $el->{id} ||= '';
+                        $el->{id} = $el->{id} . '_' if $el->{id};
+                        $el->{id} .= $el->{attrs}->[$i + 1]->{text};
+                        next;
+                    }
+
                     $attrs .= ' ';
                     $attrs .= $el->{attrs}->[$i];
                     $attrs .= '=';
@@ -386,7 +470,18 @@ EOF
                 }
             }
 
-            $output .= qq|"$offset<$el->{name}$el->{tail}$attrs$ending>"|;
+            my $tail = '';
+            if ($el->{class}) {
+                $tail .= qq/ class='/;
+                $tail .= join(' ', @{$el->{class}});
+                $tail .= qq/'/;
+            }
+
+            if ($el->{id}) {
+                $tail .= qq/ id='$el->{id}'/;
+            }
+
+            $output .= qq|"$offset<$el->{name}$tail$attrs$ending>"|;
 
             if ($el->{text} && $el->{expr}) {
                 $output .= '. ' . $el->{text};
@@ -396,8 +491,11 @@ EOF
                 $output .= '. "' . quotemeta($el->{text}) . '"';
                 $output .= qq|. "</$el->{name}>"| unless $el->{autoclose};
             }
-            elsif ($self->tape->[$count + 1]
-                && $self->tape->[$count + 1]->{level} == $el->{level})
+            elsif (
+                !$self->tape->[$count + 1]
+                || (   $self->tape->[$count + 1]
+                    && $self->tape->[$count + 1]->{level} == $el->{level})
+              )
             {
                 $output .= qq|. "</$el->{name}>"| unless $el->{autoclose};
             }
@@ -417,7 +515,7 @@ EOF
                 my $escape = '';
                 if ((!exists $el->{escape} && $self->escape_html) || (exists
                         $el->{escape} && $el->{escape} == 1)) {
-                    $escape = 'escape' 
+                    $escape = 'escape';
                 }
 
                 $output .= qq/. $escape / . +$el->{text};
@@ -451,6 +549,21 @@ EOF
         }
         elsif ($el->{type} eq 'comment') {
             push @$stack, $el;
+        }
+        elsif ($el->{type} eq 'filter') {
+            my $filter = $self->filters->{$el->{name}};
+            die "unknown filter: $el->{name}" unless $filter;
+
+            if ($el->{name} eq 'escaped') {
+                $output = qq/escape "/ . quotemeta($el->{text}) . qq/\n";/;
+            }
+            else {
+                $el->{text} = $filter->($el->{text});
+
+                my $text = quotemeta($el->{text});
+                $text =~ s/\\\n/\\n/g;
+                $output = qq/"/ . $text . qq/\n";/;
+            }
         }
         else {
             die "unknown type=" . $el->{type};
@@ -500,7 +613,11 @@ sub compile {
     return unless $code;
 
     my $compiled = eval $code;
-    die $@ if $@;
+
+    if ($@) {
+        $self->error($@);
+        return undef;
+    }
 
     $self->compiled($compiled);
 
@@ -516,7 +633,10 @@ sub interpret {
 
     my $output = eval { $compiled->() };
 
-    die $@ if $@;
+    if ($@) {
+        $self->error($@);
+        return undef;
+    }
 
     return $output;
 }
@@ -529,10 +649,10 @@ sub render {
     $self->parse($tmpl);
 
     # Build
-    $self->build(@_);
+    return unless defined $self->build(@_);
 
     # Compile
-    $self->compile;
+    $self->compile || return undef;
 
     # Interpret
     return $self->interpret(@_);
@@ -567,15 +687,20 @@ sub _doctype {
     $type ||= '';
     $encoding ||= 'utf-8';
 
-    if ($type eq 'XML') {
+    $type = lc $type;
+
+    if ($type eq 'xml') {
+        return '' if $self->format eq 'html5';
+        return '' if $self->format eq 'html4';
+
         return qq|<?xml version='1.0' encoding='$encoding' ?>|;
     }
 
     if ($self->format eq 'xhtml') {
-        if ($type eq 'Strict') {
+        if ($type eq 'strict') {
             return q|<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">|;
         }
-        elsif ($type eq 'Frameset') {
+        elsif ($type eq 'frameset') {
             return q|<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Frameset//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-frameset.dtd">|;
         }
         elsif ($type eq '5') {
@@ -584,10 +709,10 @@ sub _doctype {
         elsif ($type eq '1.1') {
             return q|<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">|;
         }
-        elsif ($type eq 'Basic') {
+        elsif ($type eq 'basic') {
             return q|<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML Basic 1.1//EN" "http://www.w3.org/TR/xhtml-basic/xhtml-basic11.dtd">|;
         }
-        elsif ($type eq 'Mobile') {
+        elsif ($type eq 'mobile') {
             return q|<!DOCTYPE html PUBLIC "-//WAPFORUM//DTD XHTML Mobile 1.2//EN" "http://www.openmobilealliance.org/tech/DTD/xhtml-mobile12.dtd">|;
         }
         else {
@@ -595,10 +720,10 @@ sub _doctype {
         }
     }
     elsif ($self->format eq 'html4') {
-        if ($type eq 'Strict') {
+        if ($type eq 'strict') {
             return q|<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">|;
         }
-        elsif ($type eq 'Frameset') {
+        elsif ($type eq 'frameset') {
             return q|<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Frameset//EN" "http://www.w3.org/TR/html4/frameset.dtd">|;
         }
         else {

@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 
-use Test::More tests => 2;
+use Test::More tests => 3;
 
 use Text::Haml;
 
@@ -22,7 +22,7 @@ $output = $haml->render(<<'EOF');
 - my $link = 'http://foo.bar';
 %a{href => $link} FooBar
 EOF
-is($output, <<'EOF')
+is($output, <<'EOF');
 <a href='http://foo.bar'>FooBar</a>
 EOF
 
@@ -34,14 +34,13 @@ EOF
 #<script src='javascripts/script_9' type='text/javascript'></script>
 #EOF
 
-## HTML-style Attributes: ()
-#
-#$output = $haml->render(<<'EOF');
-#%html(xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en")
-#EOF
-#is($output, <<'EOF');
-#<html xmlns='http://www.w3.org/1999/xhtml' xml:lang='en' lang='en'></html>
-#EOF
+# HTML-style Attributes: ()
+$output = $haml->render(<<'EOF');
+%html(xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en")
+EOF
+is($output, <<'EOF');
+<html xmlns='http://www.w3.org/1999/xhtml' xml:lang='en' lang='en'></html>
+EOF
 #
 ## Attribute Methods
 #

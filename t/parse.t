@@ -5,7 +5,7 @@ use warnings;
 
 use Text::Haml;
 
-use Test::More tests => 15;
+use Test::More tests => 16;
 
 my $haml = Text::Haml->new;
 
@@ -39,6 +39,7 @@ $haml->parse(<<'EOF');
     %baz= 1 + 2
       Wow this is cool!
       %a{href => 'foo', name => helper} Link
+      %a(href="foo" name=helper) Link
 EOF
 is_deeply(
     $haml->tape,
@@ -46,7 +47,8 @@ is_deeply(
         {   type  => 'tag',
             level => 2,
             name  => 'whiz',
-            tail  => q| class='class class2' id='id'|,
+            class => [qw/class class2/],
+            id    => 'id',
             attrs => [foo => {type => 'text', text => 'bar'}],
             line  => "%whiz.class.class2#id{foo => 'bar'}"
         },
@@ -74,6 +76,19 @@ is_deeply(
             ],
             text => 'Link',
             line => "%a{href => 'foo', name => helper} Link"
+        },
+        {   type  => 'tag',
+            level => 6,
+            name  => 'a',
+            attrs => [
+                href => {type => 'text', text => 'foo'},
+                name => {
+                    type => 'expr',
+                    text => 'helper'
+                }
+            ],
+            text => 'Link',
+            line => q/%a(href="foo" name=helper) Link/
         },
         {   type  => 'text',
             level => 0,
@@ -330,6 +345,35 @@ is_deeply(
             expr                => 1,
             preserve_whitespace => 1,
             line                => '~ "Foo\n<pre>Bar\nBaz</pre>"'
+        },
+        {   type  => 'text',
+            level => 0,
+            line  => ''
+        }
+    ]
+);
+
+$haml->parse(<<'EOF');
+:escaped
+  <foo>
+:preserve
+  Hello
+
+  there.
+EOF
+is_deeply(
+    $haml->tape,
+    [   {   type  => 'filter',
+            level => 0,
+            name  => 'escaped',
+            text  => '<foo>',
+            line  => ":escaped\n  <foo>"
+        },
+        {   type  => 'filter',
+            level => 0,
+            name  => 'preserve',
+            text  => "Hello\n\nthere.",
+            line  => ":preserve\n  Hello\n\n  there."
         },
         {   type  => 'text',
             level => 0,
