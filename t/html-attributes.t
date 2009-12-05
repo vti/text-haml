@@ -35,11 +35,13 @@ EOF
 #EOF
 
 # HTML-style Attributes: ()
-$output = $haml->render(<<'EOF');
+$output = $haml->render(<<'EOF', var => 'bar');
 %html(xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en")
+.hello(class=var)
 EOF
 is($output, <<'EOF');
 <html xmlns='http://www.w3.org/1999/xhtml' xml:lang='en' lang='en'></html>
+<div class='bar hello'></div>
 EOF
 #
 ## Attribute Methods

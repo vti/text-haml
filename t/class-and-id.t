@@ -52,8 +52,8 @@ is($output, <<'EOF');
 <bar id='baz_1'></bar>
 EOF
 
-$output = $haml->render(<<'EOF');
-%foo{class=>'bar'}
+$output = $haml->render(<<'EOF', bar => 'bar');
+%foo{class=>bar}
 %bar.baz{class=>'bar'}
 EOF
 is($output, <<'EOF');

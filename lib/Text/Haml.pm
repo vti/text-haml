@@ -222,8 +222,6 @@ sub parse {
             |$id_start
             |$attributes_start
             |$attributes_start2
-            |$escape_token
-            |$unescape_token
             )/x
           )
         {
@@ -382,12 +380,18 @@ EOF
     $ESCAPE =~ s/\n//g;
 
     my $namespace = $self->namespace || ref($self) . '::template';
-    $code .= qq/package $namespace; $ESCAPE; sub { my \$_H = ''; /;
+    $code .= qq/package $namespace;/;
 
-    # Embed variables
+    $code .= qq/sub { my \$_H = ''; $ESCAPE;/;
+
+    $code .= qq/my \$self = shift;/;
+
+    $code .= qq/no strict 'refs'; no warnings 'redefine';/;
+    # Install variables
     foreach my $var (sort keys %vars) {
-        $code .= qq/my \$$var = \$self->vars->{$var};/;
+        $code .= qq/sub $var() : lvalue; *$var = sub () : lvalue {\$self->vars->{'$var'}};/;
     }
+    $code .= qq/use strict; use warnings;/;
 
     $code .= $self->prepend;
 
@@ -445,12 +449,21 @@ EOF
             my $attrs = '';
             if ($el->{attrs}) {
                 for (my $i = 0; $i < @{$el->{attrs}}; $i += 2) {
-                    if ($el->{attrs}->[$i] eq 'class') {
+                    my $name = $el->{attrs}->[$i];
+                    my $value = $el->{attrs}->[$i + 1];
+                    my $text = $value->{text};
+
+                    if ($name eq 'class') {
                         $el->{class} ||= [];
-                        push @{$el->{class}}, $el->{attrs}->[$i + 1]->{text};
+                        if ($value->{type} eq 'text') {
+                            push @{$el->{class}}, $text;
+                        }
+                        else {
+                            push @{$el->{class}}, qq/" . $text . "/;
+                        }
                         next;
                     }
-                    elsif ($el->{attrs}->[$i] eq 'id') {
+                    elsif ($name eq 'id') {
                         $el->{id} ||= '';
                         $el->{id} = $el->{id} . '_' if $el->{id};
                         $el->{id} .= $el->{attrs}->[$i + 1]->{text};
@@ -458,10 +471,9 @@ EOF
                     }
 
                     $attrs .= ' ';
-                    $attrs .= $el->{attrs}->[$i];
+                    $attrs .= $name;
                     $attrs .= '=';
-                    my $text = $el->{attrs}->[$i + 1]->{text};
-                    if ($el->{attrs}->[$i + 1]->{type} eq 'text') {
+                    if ($value->{type} eq 'text') {
                         $attrs .= "'$text'";
                     }
                     else {
@@ -472,9 +484,11 @@ EOF
 
             my $tail = '';
             if ($el->{class}) {
-                $tail .= qq/ class='/;
-                $tail .= join(' ', sort @{$el->{class}});
-                $tail .= qq/'/;
+                $tail .= qq/ class='"./;
+                $tail .= qq/join(' ', sort(/;
+                $tail .= join(',', map {"\"$_\""} @{$el->{class}});
+                $tail .= qq/))/;
+                $tail .= qq/."'/;
             }
 
             if ($el->{id}) {
@@ -631,7 +645,7 @@ sub interpret {
 
     my $compiled = $self->compiled;
 
-    my $output = eval { $compiled->() };
+    my $output = eval { $compiled->($self) };
 
     if ($@) {
         $self->error($@);
