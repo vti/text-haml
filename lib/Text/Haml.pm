@@ -447,7 +447,7 @@ EOF
                 for (my $i = 0; $i < @{$el->{attrs}}; $i += 2) {
                     if ($el->{attrs}->[$i] eq 'class') {
                         $el->{class} ||= [];
-                        unshift @{$el->{class}}, $el->{attrs}->[$i + 1]->{text};
+                        push @{$el->{class}}, $el->{attrs}->[$i + 1]->{text};
                         next;
                     }
                     elsif ($el->{attrs}->[$i] eq 'id') {
@@ -473,7 +473,7 @@ EOF
             my $tail = '';
             if ($el->{class}) {
                 $tail .= qq/ class='/;
-                $tail .= join(' ', @{$el->{class}});
+                $tail .= join(' ', sort @{$el->{class}});
                 $tail .= qq/'/;
             }
 
