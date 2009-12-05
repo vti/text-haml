@@ -251,7 +251,7 @@ sub parse {
                 }
             }
 
-            if ($line =~ s/$attributes_start(.*?)$attributes_end//) {
+            if ($line =~ s/^$attributes_start(.*?)$attributes_end//) {
                 my $attrs = $1;
 
                 my @attr = split(/\s*,\s*/, $attrs);
@@ -283,7 +283,7 @@ sub parse {
                 $el->{attrs} = $attrs if @$attrs;
             }
 
-            if ($line =~ s/$attributes_start2(.*?)$attributes_end2//) {
+            if ($line =~ s/^$attributes_start2(.*?)$attributes_end2//) {
                 my $list = $1;
 
                 my $attrs = [];
