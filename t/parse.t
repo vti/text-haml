@@ -35,7 +35,7 @@ is_deeply($haml->tape,
 
 $haml->parse(<<'EOF');
 %gee
-  %whiz.class.class2#id{foo => 'bar'}
+  .class.class2#id{foo => 'bar'}
     %baz= 1 + 2
       Wow this is cool!
       %a{href => 'foo', name => helper} Link
@@ -46,11 +46,11 @@ is_deeply(
     [   {type => 'tag', level => 0, name => 'gee', line => '%gee'},
         {   type  => 'tag',
             level => 2,
-            name  => 'whiz',
+            name  => 'div',
             class => [qw/class class2/],
             id    => 'id',
             attrs => [foo => {type => 'text', text => 'bar'}],
-            line  => "%whiz.class.class2#id{foo => 'bar'}"
+            line  => ".class.class2#id{foo => 'bar'}"
         },
         {   type  => 'tag',
             level => 4,

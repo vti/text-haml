@@ -109,24 +109,39 @@ sub parse {
 
     $self->tape([]);
 
-    my $level_token      = quotemeta ' ';
-    my $escape_token     = quotemeta '&';
-    my $unescape_token   = quotemeta '!';
-    my $expr_token       = quotemeta '=';
-    my $tag_start        = quotemeta '%';
-    my $class_start      = quotemeta '.';
-    my $id_start         = quotemeta '#';
-    my $attributes_start = quotemeta '{';
-    my $attributes_end   = quotemeta '}';
-    my $attributes_tail = "([^\\$attributes_end]+)($attributes_end)?";
-    my $attributes_start2= quotemeta '(';
-    my $attributes_end2  = quotemeta ')';
-    my $attributes_tail2 = "([^\\$attributes_end2]+)($attributes_end2)?";
-    my $filter_token     = quotemeta ':';
-    my $quote            = "'";
-    my $comment_token    = quotemeta '-#';
-    my $trim_in          = quotemeta '<';
-    my $trim_out         = quotemeta '>';
+    my $level_token       = quotemeta ' ';
+    my $escape_token      = quotemeta '&';
+    my $unescape_token    = quotemeta '!';
+    my $expr_token        = quotemeta '=';
+    my $tag_start         = quotemeta '%';
+    my $class_start       = quotemeta '.';
+    my $id_start          = quotemeta '#';
+    my $attributes_start  = quotemeta '{';
+    my $attributes_end    = quotemeta '}';
+    my $attributes_tail   = qr/([^\\$attributes_end]+)($attributes_end)?/;
+    my $attributes_start2 = quotemeta '(';
+    my $attributes_end2   = quotemeta ')';
+    my $attributes_tail2  = qr/([^\\$attributes_end2]+)($attributes_end2)?/;
+    my $filter_token      = quotemeta ':';
+    my $quote             = "'";
+    my $comment_token     = quotemeta '-#';
+    my $trim_in           = quotemeta '<';
+    my $trim_out          = quotemeta '>';
+    my $autoclose_token   = quotemeta '/';
+    my $multiline_token   = quotemeta '|';
+
+    my $tag_name = qr/([^
+        $level_token
+        $attributes_start
+        $attributes_start2
+        $class_start
+        $id_start
+        $trim_in
+        $trim_out
+        $unescape_token
+        $escape_token
+        $expr_token
+        $autoclose_token]+)/;
 
     my $tape = $self->tape;
 
@@ -227,24 +242,23 @@ sub parse {
             )/x
           )
         {
-            if ($line =~ s/^$tag_start([^ \({.<>#!&=\/]+)//) {
-                $el->{type} = 'tag';
+            $el->{type} = 'tag';
+
+            if ($line =~ s/^$tag_start$tag_name//) {
                 $el->{name} = $1;
             }
 
             while (1) {
-                if ($line =~ s/^\.([^ \({#\.!&=<>\/]+)//) {
+                if ($line =~ s/^$class_start$tag_name//) {
                     my $class = join(' ', split(/\./, $1));
 
-                    $el->{type} = 'tag';
                     $el->{name} ||= 'div';
                     $el->{class} ||= [];
                     push @{$el->{class}},$class;
                 }
-                elsif ($line =~ s/^\#([^ \({#\.!&=<>\/]+)//) {
+                elsif ($line =~ s/^$id_start$tag_name//) {
                     my $id = $1;
 
-                    $el->{type} = 'tag';
                     $el->{name} ||= 'div';
                     $el->{id} = $id;
                 }
@@ -358,7 +372,9 @@ sub parse {
         }
 
         if ($el->{type} eq 'tag'
-            && ($line =~ s/\/$// || grep { $el->{name} eq $_ } @AUTOCLOSE))
+            && ($line =~ s/$autoclose_token$//
+                || grep { $el->{name} eq $_ } @AUTOCLOSE)
+          )
         {
             $el->{autoclose} = 1;
         }
@@ -366,7 +382,7 @@ sub parse {
         $line =~ s/^ // if $line;
 
         # Multiline
-        if ($line && $line =~ s/(\s*)\|$//) {
+        if ($line && $line =~ s/(\s*)$multiline_token$//) {
 
             # For the first time
             if (!$tape->[-1] || ref $tape->[-1]->{text} ne 'ARRAY') {
