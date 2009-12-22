@@ -5,7 +5,7 @@ use warnings;
 
 use Text::Haml;
 
-use Test::More tests => 17;
+use Test::More tests => 18;
 
 my $haml = Text::Haml->new;
 
@@ -114,6 +114,46 @@ is_deeply(
             name  => 'b',
             attrs => [foo => {type => 'boolean', text => 0}],
             line  => q/%b{:foo=>false}/
+        },
+        {   type  => 'text',
+            level => 0,
+            line  => ''
+        }
+    ]
+);
+
+$haml->parse(<<'EOF');
+%script{:type => "text/javascript",
+        :src  => "javascripts/script.js"}
+%foo(foo = "foo"
+     bar = "bar"
+     baz = "baz")
+EOF
+is_deeply(
+    $haml->tape,
+    [   {   type  => 'tag',
+            level => 0,
+            name  => 'script',
+            attrs => [
+                type => {type => 'text', text => 'text/javascript'},
+                src  => {
+                    type => 'text',
+                    text => 'javascripts/script.js'
+                }
+            ],
+            line =>
+              qq|%script{:type => "text/javascript",\n        :src  => "javascripts/script.js"}|
+        },
+        {   type  => 'tag',
+            level => 0,
+            name  => 'foo',
+            attrs => [
+                foo => {type => 'text', text => 'foo'},
+                bar => {type => 'text', text => 'bar'},
+                baz => {type => 'text', text => 'baz'},
+            ],
+            line =>
+              qq|%foo(foo = "foo"\n     bar = "bar"\n     baz = "baz")|
         },
         {   type  => 'text',
             level => 0,

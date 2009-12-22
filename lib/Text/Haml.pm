@@ -118,8 +118,10 @@ sub parse {
     my $id_start         = quotemeta '#';
     my $attributes_start = quotemeta '{';
     my $attributes_end   = quotemeta '}';
+    my $attributes_tail = "([^\\$attributes_end]+)($attributes_end)?";
     my $attributes_start2= quotemeta '(';
     my $attributes_end2  = quotemeta ')';
+    my $attributes_tail2 = "([^\\$attributes_end2]+)($attributes_end2)?";
     my $filter_token     = quotemeta ':';
     my $quote            = "'";
     my $comment_token    = quotemeta '-#';
@@ -251,8 +253,22 @@ sub parse {
                 }
             }
 
-            if ($line =~ s/^$attributes_start(.*?)$attributes_end//) {
+            if ($line =~ s/^$attributes_start$attributes_tail//) {
                 my $attrs = $1;
+                my $end = $2;
+
+                while (!$end) {
+                    $line = $lines[$i + 1] || last;
+                    unless ($line =~ s/^$attributes_tail//) {
+                        $line = $lines[$i];
+                        last;
+                    }
+                    ++$i;
+                    $el->{line} .= "\n" . $1;
+                    $el->{line} .= $2 if $2;
+                    $attrs .= $1;
+                    $end = $2;
+                }
 
                 my @attr = split(/\s*,\s*/, $attrs);
                 $attrs = [];
@@ -287,8 +303,22 @@ sub parse {
                 $el->{attrs} = $attrs if @$attrs;
             }
 
-            if ($line =~ s/^$attributes_start2(.*?)$attributes_end2//) {
+            if ($line =~ s/^$attributes_start2$attributes_tail2//) {
                 my $list = $1;
+                my $end = $2;
+
+                while (!$end) {
+                    $line = $lines[$i + 1] || last;
+                    unless ($line =~ s/^$attributes_tail2//) {
+                        $line = $lines[$i];
+                        last;
+                    }
+                    ++$i;
+                    $el->{line} .= "\n" . $1;
+                    $el->{line} .= $2 if $2;
+                    $list .= $1;
+                    $end = $2;
+                }
 
                 my $attrs = [];
                 while (1) {
@@ -456,7 +486,7 @@ EOF
 
             my $attrs = '';
             if ($el->{attrs}) {
-                for (my $i = 0; $i < @{$el->{attrs}}; $i += 2) {
+                for (my $i = 0; $i < @{$el->{attrs}}; $i+=2) {
                     my $name = $el->{attrs}->[$i];
                     my $value = $el->{attrs}->[$i + 1];
                     my $text = $value->{text};
@@ -474,7 +504,7 @@ EOF
                     elsif ($name eq 'id') {
                         $el->{id} ||= '';
                         $el->{id} = $el->{id} . '_' if $el->{id};
-                        $el->{id} .= $el->{attrs}->[$i + 1]->{text};
+                        $el->{id} .= $value->{text};
                         next;
                     }
 

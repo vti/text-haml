@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 
-use Test::More tests => 6;
+use Test::More tests => 7;
 
 use Text::Haml;
 
@@ -26,13 +26,13 @@ is($output, <<'EOF');
 <a href='http://foo.bar'>FooBar</a>
 EOF
 
-#$output = $haml->render(<<'EOF');
-#%script{:type => "text/javascript",
-#        :src  => "javascripts/script_#{2 + 7}"}
-#EOF
-#is($output, <<'EOF');
-#<script src='javascripts/script_9' type='text/javascript'></script>
-#EOF
+$output = $haml->render(<<'EOF');
+%script{:src  => "javascripts/script.js",
+        :type => "text/javascript"}
+EOF
+is($output, <<'EOF');
+<script src='javascripts/script.js' type='text/javascript'></script>
+EOF
 
 # HTML-style Attributes: ()
 $output = $haml->render(<<'EOF', var => 'bar');
