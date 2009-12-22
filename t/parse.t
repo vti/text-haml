@@ -5,7 +5,7 @@ use warnings;
 
 use Text::Haml;
 
-use Test::More tests => 16;
+use Test::More tests => 17;
 
 my $haml = Text::Haml->new;
 
@@ -89,6 +89,31 @@ is_deeply(
             ],
             text => 'Link',
             line => q/%a(href="foo" name=helper) Link/
+        },
+        {   type  => 'text',
+            level => 0,
+            line  => ''
+        }
+    ]
+);
+
+$haml->parse(<<'EOF');
+%b(foo=true)
+%b{:foo=>false}
+EOF
+is_deeply(
+    $haml->tape,
+    [   {   type  => 'tag',
+            level => 0,
+            name  => 'b',
+            attrs => [foo => {type => 'boolean', text => 1}],
+            line  => q/%b(foo=true)/
+        },
+        {   type  => 'tag',
+            level => 0,
+            name  => 'b',
+            attrs => [foo => {type => 'boolean', text => 0}],
+            line  => q/%b{:foo=>false}/
         },
         {   type  => 'text',
             level => 0,

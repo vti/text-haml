@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 
-use Test::More tests => 3;
+use Test::More tests => 6;
 
 use Text::Haml;
 
@@ -80,22 +80,32 @@ EOF
 ##<sandwich bread='whole wheat' delicious='true' filling='peanut butter and jelly' />
 ##
 #
-## Boolean Attributes
-#
-## HTML
-#
-#$output = $haml->render(<<'EOF');
-#%input{:selected => true}
-#EOF
-#is($output, <<'EOF');
-#<input selected='selected'>
-#EOF
-#
-## XHTML
-#
-#$output = $haml->render(<<'EOF');
-#%input{:selected => false}
-#EOF
-#is($output, <<'EOF');
-#<input>
-#EOF
+
+# Boolean Attributes
+
+# XHTML
+$haml->format('xhtml');
+$output = $haml->render(<<'EOF');
+%input{:selected => true}
+EOF
+is($output, <<'EOF');
+<input selected='selected' />
+EOF
+
+# HTML
+$haml->format('html');
+$output = $haml->render(<<'EOF');
+%input{:selected => false}
+EOF
+is($output, <<'EOF');
+<input>
+EOF
+
+# HTML
+$haml->format('html');
+$output = $haml->render(<<'EOF');
+%input(selected=true)
+EOF
+is($output, <<'EOF');
+<input selected>
+EOF

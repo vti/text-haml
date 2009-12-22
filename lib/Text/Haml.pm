@@ -271,6 +271,10 @@ sub parse {
                     if ($attr =~ s/^\s*('|")(.*?)\1\s*$//x) {
                         push @$attrs, $name => {type => 'text', text => $2};
                     }
+                    elsif ($attr =~ s/^\s*(true|false)\s*//) {
+                        push @$attrs, $name =>
+                          {type => 'boolean', text => $1 eq 'true' ? 1 : 0};
+                    }
                     elsif ($attr =~ s/^\s*([^ ]+)\s*$//x) {
                         push @$attrs, $name => {type => 'expr', text => $1};
                     }
@@ -290,6 +294,10 @@ sub parse {
                 while (1) {
                     if ($list =~ s/^\s*(.*?)\s*=\s*('|")(.*?)\2\s*//) {
                         push @$attrs, $1 => {type => 'text', text => $3};
+                    }
+                    elsif ($list =~ s/^\s*(.*?)\s*=\s*(true|false)\s*//) {
+                        push @$attrs, $1 =>
+                          {type => 'boolean', text => $2 eq 'true' ? 1 : 0};
                     }
                     elsif ($list =~ s/^\s*(.*?)\s*=\s*([^ ]+)\s*//) {
                         push @$attrs, $1 => {type => 'expr', text => $2};
@@ -470,14 +478,26 @@ EOF
                         next;
                     }
 
-                    $attrs .= ' ';
-                    $attrs .= $name;
-                    $attrs .= '=';
-                    if ($value->{type} eq 'text') {
-                        $attrs .= "'$text'";
+                    if ($value->{type} eq 'text' || $value->{type} eq 'expr')
+                    {
+                        $attrs .= ' ';
+                        $attrs .= $name;
+                        $attrs .= '=';
+
+                        if ($value->{type} eq 'text') {
+                            $attrs .= "'$text'";
+                        }
+                        else {
+                            $attrs .= qq/'" . $text . "'/;
+                        }
                     }
-                    else {
-                        $attrs .= qq/'" . $text . "'/;
+                    elsif ($value->{type} eq 'boolean' && $value->{text}) {
+                        $attrs .= ' ';
+                        $attrs .= $name;
+                        if ($self->format eq 'xhtml') {
+                            $attrs .= '=';
+                            $attrs .= qq/'$name'/;
+                        }
                     }
                 }
             }
