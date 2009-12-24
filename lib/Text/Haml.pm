@@ -164,14 +164,14 @@ sub parse {
     my $attribute_arrow  = quotemeta '=>';
     my $attributes_sep   = quotemeta ',';
     my $attribute_prefix = quotemeta ':';
-    my $attribute_name   = qr/.*?(?= |$attribute_arrow)/;
+    my $attribute_name   = qr/(?:$STRING_RE|.*?(?= |$attribute_arrow))/;
     my $attribute_value  = qr/(?:$STRING_RE|[^ $attributes_sep$attributes_end]+)/x;
 
     my $attributes_start2 = quotemeta '(';
     my $attributes_end2   = quotemeta ')';
     my $attribute_arrow2  = quotemeta '=';
     my $attributes_sep2    = ' ';
-    my $attribute_name2   = qr/.*?(?= |$attribute_arrow2)/;
+    my $attribute_name2   = qr/(?:$STRING_RE|.*?(?= |$attribute_arrow2))/;
     my $attribute_value2  = qr/(?:$STRING_RE|[^ $attributes_sep2$attributes_end2]+)/;
 
     my $filter_token      = quotemeta ':';
@@ -378,6 +378,11 @@ sub parse {
                         else {
                             $self->error('Tag attributes parsing error');
                             return;
+                        }
+
+                        if ($name =~ s/^(?:'|")//) {
+                            $name =~ s/(?:'|")$//;
+                            $name =~ s/($UNESCAPE_RE)/$ESCAPE->{$1}/g;
                         }
 
                         if ($value =~ s/^(?:'|")//) {
