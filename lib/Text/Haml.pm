@@ -11,6 +11,48 @@ our $VERSION = '0.010201';
 
 use constant CHUNK_SIZE => 4096;
 
+my $ESCAPE = {
+    '\"' => "\x22",
+    "\'" => "\x27",
+    '\\' => "\x5c",
+    '\/' => "\x2f",
+    '\b' => "\x8",
+    '\f' => "\xC",
+    '\n' => "\xA",
+    '\r' => "\xD",
+    '\t' => "\x9"
+};
+
+my $UNESCAPE_RE = qr/
+    \\[\"\'\/\\bfnrt]
+/x;
+
+my $STRING_DOUBLE_QUOTES_RE = qr/
+    \"
+    (?:
+    $UNESCAPE_RE
+    |
+    [\x20-\x21\x23-\x5b\x5b-\x{10ffff}]
+    )*
+    \"
+/x;
+
+my $STRING_SINGLE_QUOTES_RE = qr/
+    \'
+    (?:
+    $UNESCAPE_RE
+    |
+    [\x20-\x26\x28-\x5b\x5b-\x{10ffff}]
+    )*
+    \'
+/x;
+
+my $STRING_RE = qr/
+    $STRING_SINGLE_QUOTES_RE
+    |
+    $STRING_DOUBLE_QUOTES_RE
+/x;
+
 sub new {
     my $class = shift;
 
@@ -116,12 +158,22 @@ sub parse {
     my $tag_start         = quotemeta '%';
     my $class_start       = quotemeta '.';
     my $id_start          = quotemeta '#';
-    my $attributes_start  = quotemeta '{';
-    my $attributes_end    = quotemeta '}';
-    my $attributes_tail   = qr/([^\\$attributes_end]+)($attributes_end)?/;
+
+    my $attributes_start = quotemeta '{';
+    my $attributes_end   = quotemeta '}';
+    my $attribute_arrow  = quotemeta '=>';
+    my $attributes_sep   = quotemeta ',';
+    my $attribute_prefix = quotemeta ':';
+    my $attribute_name   = qr/.*?(?= |$attribute_arrow)/;
+    my $attribute_value  = qr/(?:$STRING_RE|[^ $attributes_sep$attributes_end]+)/x;
+
     my $attributes_start2 = quotemeta '(';
     my $attributes_end2   = quotemeta ')';
-    my $attributes_tail2  = qr/([^\\$attributes_end2]+)($attributes_end2)?/;
+    my $attribute_arrow2  = quotemeta '=';
+    my $attributes_sep2    = ' ';
+    my $attribute_name2   = qr/.*?(?= |$attribute_arrow2)/;
+    my $attribute_value2  = qr/(?:$STRING_RE|[^ $attributes_sep2$attributes_end2]+)/;
+
     my $filter_token      = quotemeta ':';
     my $quote             = "'";
     my $comment_token     = quotemeta '-#';
@@ -267,87 +319,79 @@ sub parse {
                 }
             }
 
-            if ($line =~ s/^$attributes_start$attributes_tail//) {
-                my $attrs = $1;
-                my $end = $2;
-
-                while (!$end) {
-                    $line = $lines[$i + 1] || last;
-                    unless ($line =~ s/^$attributes_tail//) {
-                        $line = $lines[$i];
-                        last;
-                    }
-                    ++$i;
-                    $el->{line} .= "\n" . $1;
-                    $el->{line} .= $2 if $2;
-                    $attrs .= $1;
-                    $end = $2;
-                }
-
-                my @attr = split(/\s*,\s*/, $attrs);
-                $attrs = [];
-                foreach my $attr (@attr) {
-                    my $name;
-                    if ($attr =~ s/^\s*('|")(.*?)\1\s*=>//x) {
-                        $name = $2;
-                    }
-                    elsif ($attr =~ s/^\s*:?([^ ]+)\s*=>//x) {
-                        $name = $1;
-                    }
-                    else {
-                        next;
-                    }
-
-                    if ($attr =~ s/^\s*('|")(.*?)\1\s*$//x) {
-                        push @$attrs, $name => {type => 'text', text => $2};
-                    }
-                    elsif ($attr =~ s/^\s*(true|false)\s*//) {
-                        push @$attrs, $name =>
-                          {type => 'boolean', text => $1 eq 'true' ? 1 : 0};
-                    }
-                    elsif ($attr =~ s/^\s*([^ ]+)\s*$//x) {
-                        push @$attrs, $name => {type => 'expr', text => $1};
-                    }
-                    else {
-                        next;
-                    }
-                }
-
-                $el->{type} = 'tag';
-                $el->{attrs} = $attrs if @$attrs;
-            }
-
-            if ($line =~ s/^$attributes_start2$attributes_tail2//) {
-                my $list = $1;
-                my $end = $2;
-
-                while (!$end) {
-                    $line = $lines[$i + 1] || last;
-                    unless ($line =~ s/^$attributes_tail2//) {
-                        $line = $lines[$i];
-                        last;
-                    }
-                    ++$i;
-                    $el->{line} .= "\n" . $1;
-                    $el->{line} .= $2 if $2;
-                    $list .= $1;
-                    $end = $2;
-                }
-
+            if ($line =~ m/^
+                (?:
+                    $attributes_start\s*
+                    $attribute_prefix?
+                    $attribute_name\s*
+                    $attribute_arrow\s*
+                    $attribute_value
+                    |
+                    $attributes_start2\s*
+                    $attribute_name2\s*
+                    $attribute_arrow2\s*
+                    $attribute_value2
+                )
+                /x)
+            {
                 my $attrs = [];
+
+                my $type = 'html';
+                if ($line =~ s/^$attributes_start//) {
+                    $type = 'perl';
+                }
+                else {
+                    $line =~ s/^$attributes_start2//;
+                }
+
                 while (1) {
-                    if ($list =~ s/^\s*(.*?)\s*=\s*('|")(.*?)\2\s*//) {
-                        push @$attrs, $1 => {type => 'text', text => $3};
+                    if (!$line) {
+                        $line = $lines[++$i] || last;
+                        $el->{line} .= "\n$line";
                     }
-                    elsif ($list =~ s/^\s*(.*?)\s*=\s*(true|false)\s*//) {
-                        push @$attrs, $1 =>
-                          {type => 'boolean', text => $2 eq 'true' ? 1 : 0};
+                    elsif ($type eq 'perl' && $line =~ s/^$attributes_end//) {
+                        last;
                     }
-                    elsif ($list =~ s/^\s*(.*?)\s*=\s*([^ ]+)\s*//) {
-                        push @$attrs, $1 => {type => 'expr', text => $2};
+                    elsif ($type eq 'html' && $line =~ s/^$attributes_end2//) {
+                        last;
                     }
                     else {
-                        last;
+                        my ($name, $value);
+
+                        if ($line =~ s/^\s*$attribute_prefix?
+                                    ($attribute_name)\s*
+                                    $attribute_arrow\s*
+                                    ($attribute_value)\s*
+                                    (?:$attributes_sep\s*)?//x)
+                        {
+                            $name = $1;
+                            $value = $2;
+                        }
+                        elsif ($line =~ s/^\s*
+                                    ($attribute_name2)\s*
+                                    $attribute_arrow2\s*
+                                    ($attribute_value2)\s*
+                                    (?:$attributes_sep2\s*)?//x) {
+                            $name = $1;
+                            $value = $2;
+                        }
+                        else {
+                            $self->error('Tag attributes parsing error');
+                            return;
+                        }
+
+                        if ($value =~ s/^(?:'|")//) {
+                            $value =~ s/(?:'|")$//;
+                            $value =~ s/($UNESCAPE_RE)/$ESCAPE->{$1}/g;
+                            push @$attrs, $name => {type => 'text', text => $value};
+                        }
+                        elsif ($value eq 'true' || $value eq 'false') {
+                            push @$attrs, $name =>
+                              {type => 'boolean', text => $value eq 'true' ? 1 : 0};
+                        }
+                        else {
+                            push @$attrs, $name => {type => 'expr', text => $value};
+                        }
                     }
                 }
 

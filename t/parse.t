@@ -5,7 +5,7 @@ use warnings;
 
 use Text::Haml;
 
-use Test::More tests => 18;
+use Test::More tests => 20;
 
 my $haml = Text::Haml->new;
 
@@ -26,12 +26,112 @@ is_deeply(
 );
 
 $haml->parse("\n");
-is_deeply($haml->tape,
-    [{type => 'text', level => 0, line => ''}]);
+is_deeply($haml->tape, [{type => 'text', level => 0, line => ''}]);
 
 $haml->parse("\n");
-is_deeply($haml->tape,
-    [{type => 'text', level => 0, line => ''}]);
+is_deeply($haml->tape, [{type => 'text', level => 0, line => ''}]);
+
+$haml->parse(<<'EOF');
+%a{href => 'foo', target => "_blank", title => help_me, do => true}
+%script{:type => "text/javascript",
+        :src  => "javascripts/script.js"}
+EOF
+is_deeply(
+    $haml->tape,
+    [   {   type  => 'tag',
+            level => 0,
+            name  => 'a',
+            attrs => [
+                href   => {type => 'text',    text => 'foo'},
+                target => {type => 'text',    text => '_blank'},
+                title  => {type => 'expr',    text => 'help_me'},
+                do     => {type => 'boolean', text => 1}
+            ],
+            line =>
+              qq/%a{href => 'foo', target => "_blank", title => help_me, do => true}/
+        },
+        {   type  => 'tag',
+            level => 0,
+            name  => 'script',
+            attrs => [
+                type => {type => 'text', text => 'text/javascript'},
+                src  => {type => 'text', text => 'javascripts/script.js'}
+            ],
+            line =>
+              qq|%script{:type => "text/javascript",\n        :src  => "javascripts/script.js"}|
+        },
+        {type => 'text', level => 0, line => ''}
+    ]
+);
+
+$haml->parse(<<'EOF');
+%a(href = 'foo' target = "_blank" title = help_me do = true)
+%script(type = "text/javascript"
+        src  = "javascripts/script.js")
+EOF
+is_deeply(
+    $haml->tape,
+    [   {   type  => 'tag',
+            level => 0,
+            name  => 'a',
+            attrs => [
+                href   => {type => 'text',    text => 'foo'},
+                target => {type => 'text',    text => '_blank'},
+                title  => {type => 'expr',    text => 'help_me'},
+                do     => {type => 'boolean', text => 1}
+            ],
+            line =>
+              qq/%a(href = 'foo' target = "_blank" title = help_me do = true)/
+        },
+        {   type  => 'tag',
+            level => 0,
+            name  => 'script',
+            attrs => [
+                type => {type => 'text', text => 'text/javascript'},
+                src  => {type => 'text', text => 'javascripts/script.js'}
+            ],
+            line =>
+              qq|%script(type = "text/javascript"\n        src  = "javascripts/script.js")|
+        },
+        {type => 'text', level => 0, line => ''}
+    ]
+);
+
+$haml->parse(<<'EOF');
+%a{:foo => "#{bar}"}
+%a{:bar => "b'az"}
+%a{:bar => "b\"az"}
+%a{:bar => "baz\"}
+EOF
+is_deeply(
+    $haml->tape,
+    [   {   type  => 'tag',
+            level => 0,
+            name  => 'a',
+            attrs => [foo => {type => 'text', text => '#{bar}'}],
+            line  => '%a{:foo => "#{bar}"}'
+        },
+        {   type  => 'tag',
+            level => 0,
+            name  => 'a',
+            attrs => [bar => {type => 'text', text => "b'az"}],
+            line  => q/%a{:bar => "b'az"}/
+        },
+        {   type  => 'tag',
+            level => 0,
+            name  => 'a',
+            attrs => [bar => {type => 'text', text => 'b"az'}],
+            line  => q/%a{:bar => "b\"az"}/
+        },
+        {   type  => 'tag',
+            level => 0,
+            name  => 'a',
+            attrs => [bar => {type => 'text', text => 'baz\\'}],
+            line  => q/%a{:bar => "baz\\"}/
+        },
+        {type => 'text', level => 0, line => ''}
+    ]
+);
 
 $haml->parse(<<'EOF');
 %gee
@@ -123,46 +223,6 @@ is_deeply(
 );
 
 $haml->parse(<<'EOF');
-%script{:type => "text/javascript",
-        :src  => "javascripts/script.js"}
-%foo(foo = "foo"
-     bar = "bar"
-     baz = "baz")
-EOF
-is_deeply(
-    $haml->tape,
-    [   {   type  => 'tag',
-            level => 0,
-            name  => 'script',
-            attrs => [
-                type => {type => 'text', text => 'text/javascript'},
-                src  => {
-                    type => 'text',
-                    text => 'javascripts/script.js'
-                }
-            ],
-            line =>
-              qq|%script{:type => "text/javascript",\n        :src  => "javascripts/script.js"}|
-        },
-        {   type  => 'tag',
-            level => 0,
-            name  => 'foo',
-            attrs => [
-                foo => {type => 'text', text => 'foo'},
-                bar => {type => 'text', text => 'bar'},
-                baz => {type => 'text', text => 'baz'},
-            ],
-            line =>
-              qq|%foo(foo = "foo"\n     bar = "bar"\n     baz = "baz")|
-        },
-        {   type  => 'text',
-            level => 0,
-            line  => ''
-        }
-    ]
-);
-
-$haml->parse(<<'EOF');
 %blockquote<
   %foo
   %bar> trim out
@@ -175,10 +235,10 @@ is_deeply(
             trim_in => 1,
             line    => '%blockquote<'
         },
-        {   type    => 'tag',
-            level   => 2,
-            name    => 'foo',
-            line    => '%foo'
+        {   type  => 'tag',
+            level => 2,
+            name  => 'foo',
+            line  => '%foo'
         },
         {   type     => 'tag',
             level    => 2,
@@ -333,7 +393,7 @@ is_deeply(
         },
         {   type  => 'tag',
             level => 0,
-            name => 'p',
+            name  => 'p',
             expr  => 1,
             text  => '$i',
             line  => '%p= $i'
@@ -358,19 +418,19 @@ is_deeply(
             text  => "'foo' if 1",
             line  => "= 'foo' if 1"
         },
-        {   type  => 'text',
-            level => 0,
-            expr  => 1,
+        {   type   => 'text',
+            level  => 0,
+            expr   => 1,
             escape => 1,
-            text  => "'<escape>'",
-            line  => "&= '<escape>'"
+            text   => "'<escape>'",
+            line   => "&= '<escape>'"
         },
-        {   type  => 'text',
-            level => 0,
-            expr  => 1,
+        {   type   => 'text',
+            level  => 0,
+            expr   => 1,
             escape => 0,
-            text  => "'<noescape>'",
-            line  => "!= '<noescape>'"
+            text   => "'<noescape>'",
+            line   => "!= '<noescape>'"
         },
         {   type  => 'text',
             level => 0,
