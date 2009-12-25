@@ -5,7 +5,7 @@ use warnings;
 
 use Text::Haml;
 
-use Test::More tests => 5;
+use Test::More tests => 6;
 
 my $haml = Text::Haml->new;
 
@@ -76,4 +76,12 @@ is($output, <<'EOF');
   <b>Bar</b>
   Foo
 </p>
+EOF
+
+$output = $haml->render(<<'EOF');
+Text \with \nescaped characters.
+EOF
+is($output, <<'EOF');
+Text \with 
+escaped characters.
 EOF

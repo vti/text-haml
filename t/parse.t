@@ -5,7 +5,7 @@ use warnings;
 
 use Text::Haml;
 
-use Test::More tests => 20;
+use Test::More tests => 19;
 
 my $haml = Text::Haml->new;
 
@@ -24,9 +24,6 @@ is_deeply(
         }
     ]
 );
-
-$haml->parse("\n");
-is_deeply($haml->tape, [{type => 'text', level => 0, line => ''}]);
 
 $haml->parse("\n");
 is_deeply($haml->tape, [{type => 'text', level => 0, line => ''}]);

@@ -20,7 +20,8 @@ my $ESCAPE = {
     '\f' => "\xC",
     '\n' => "\xA",
     '\r' => "\xD",
-    '\t' => "\x9"
+    '\t' => "\x9",
+    '\\\\' => "\x5c\x5c"
 };
 
 my $UNESCAPE_RE = qr/
@@ -580,7 +581,7 @@ EOF
                         $attrs .= '=';
 
                         if ($value->{type} eq 'text') {
-                            $attrs .= "'$text'";
+                            $attrs .= "'" . $self->_parse_text($text) . "'";
                         }
                         else {
                             $attrs .= qq/'" . $text . "'/;
@@ -617,7 +618,8 @@ EOF
                 $output .= qq| . "</$el->{name}>"|;
             }
             elsif ($el->{text}) {
-                $output .= '. "' . quotemeta($el->{text}) . '"';
+                $output
+                  .= '."' . $self->_parse_text($el->{text}) . '"';
                 $output .= qq|. "</$el->{name}>"| unless $el->{autoclose};
             }
             elsif (
@@ -651,7 +653,7 @@ EOF
                 $output .= qq/;\$_H .= "\n"/;
             }
             elsif ($el->{text}) {
-                $output .= qq/. "/ . quotemeta($el->{text}) . '"';
+                $output .= '."' . $self->_parse_text($el->{text}) . '"';
                 $output .= qq/. "\n"/;
             }
 
@@ -684,12 +686,12 @@ EOF
             die "unknown filter: $el->{name}" unless $filter;
 
             if ($el->{name} eq 'escaped') {
-                $output = qq/escape "/ . quotemeta($el->{text}) . qq/\n";/;
+                $output = qq/escape "/ . $self->_parse_text($el->{text}) . qq/\n";/;
             }
             else {
                 $el->{text} = $filter->($el->{text});
 
-                my $text = quotemeta($el->{text});
+                my $text = $self->_parse_text($el->{text});
                 $text =~ s/\\\n/\\n/g;
                 $output = qq/"/ . $text . qq/\n";/;
             }
@@ -733,6 +735,55 @@ EOF
 
     $self->code($code);
     return $self;
+}
+
+sub _parse_text {
+    my $self = shift;
+    my $text = shift;
+
+    my $expr = 0;
+    if ($text =~ m/^\"/ && $text =~ m/\"$/) {
+        $text =~ s/^"//;
+        $text =~ s/"$//;
+        $expr = 1;
+    }
+
+    $text =~ s/($UNESCAPE_RE)/$ESCAPE->{$1}/g;
+
+    my $output = '';
+    while (1) {
+        my $t;
+        my $escape = 0;
+        my $found = 0;
+        if ($text =~ s/^(.*?)?(?<!\\)\#{//) {
+            $found = 1;
+            $t = $1;
+        }
+        elsif ($text =~ s/^(.*?)?\\\\\#{//) {
+            $found = 1;
+            $t = $1;
+            $escape = 1;
+        }
+
+        if ($t) {
+            $t =~ s/\\\#/\#/g;
+            $output .= $expr ? $t : quotemeta($t);
+        }
+
+        if ($found) {
+            $text =~ s/^([^}]+)}//;
+
+            my $prefix = $escape ? quotemeta("\\") : '';
+            $output .= qq/$prefix".$1."/;
+        }
+        else {
+            $text =~ s/\\\#/\#/g;
+            $output .= $expr ? $text : quotemeta($text);
+            last;
+        }
+    }
+
+    return $expr ? qq/"$output"/ : $output;
 }
 
 sub compile {
