@@ -7,20 +7,20 @@ use IO::File;
 use Scalar::Util qw/weaken/;
 use Encode qw/decode/;
 
-our $VERSION = '0.010201';
+our $VERSION = '0.990101';
 
 use constant CHUNK_SIZE => 4096;
 
 my $ESCAPE = {
-    '\"' => "\x22",
-    "\'" => "\x27",
-    '\\' => "\x5c",
-    '\/' => "\x2f",
-    '\b' => "\x8",
-    '\f' => "\xC",
-    '\n' => "\xA",
-    '\r' => "\xD",
-    '\t' => "\x9",
+    '\"'   => "\x22",
+    "\'"   => "\x27",
+    '\\'   => "\x5c",
+    '\/'   => "\x2f",
+    '\b'   => "\x8",
+    '\f'   => "\xC",
+    '\n'   => "\xA",
+    '\r'   => "\xD",
+    '\t'   => "\x9",
     '\\\\' => "\x5c\x5c"
 };
 
@@ -918,3 +918,177 @@ sub _doctype {
 }
 
 1;
+__END__
+
+=head1 NAME
+
+Text::Haml - Haml Perl implementation
+
+=head1 SYNOPSIS
+
+    use Text::Haml;
+
+    my $haml = Text::Haml->new;
+
+    my $html = $haml->render('%p foo'); # <p>foo</p>
+
+    $html = $haml->render('= user', user => 'friend'); # <div>friend</div>
+
+=head1 DESCRIPTION
+
+L<Text::Haml> implements Haml
+L<http://haml-lang.com/docs/yardoc/file.HAML_REFERENCE.html> specification.
+
+L<Text::Haml> passes specification tests written by Norman Clarke
+http://github.com/norman/haml-spec and supports only cross-language Haml
+features. Do not expect Ruby specific things to work.
+
+=head1 ATTRIBUTES
+
+L<Text::Haml> implements the following attributes:
+
+=head2 C<format>
+
+    Supported formats: xhtml, html, html5.
+
+    Default is xhtml.
+
+=head2 C<encoding>
+
+    Default is utf-8.
+
+=head2 C<escape>
+
+    Escape subroutine presented as string.
+
+    Default is
+
+    $haml->escape(<<'EOF');
+        my $s = shift;
+        $s =~ s/&/&amp;/g;
+        $s =~ s/</&lt;/g;
+        $s =~ s/>/&gt;/g;
+        $s =~ s/"/&quot;/g;
+        $s =~ s/'/&apos;/g;
+        return $s;
+    EOF
+
+=head2 C<escape_html>
+
+    Switch on/off Haml output html escaping.
+
+    Default is on.
+
+=head2 C<helpers>
+
+    Holds helpers subroutines. Helpers can be called in Haml text as normal Perl
+    functions. See also add_helper.
+
+    helpers => {
+        foo => sub {
+            my $self   = shift;
+            my $string = shift;
+
+            $string =~ s/r/z/;
+
+            return $string;
+        }
+    }
+
+=head2 C<helpers_arg>
+
+    First argument passed to the helper.
+
+    $haml->helpers_args($my_context);
+
+    Deafault is Text::Haml instance.
+
+=head2 C<error>
+
+    Holds last error.
+
+=head1 METHODS
+
+=head2 C<new>
+
+    my $haml = Text::Haml->new;
+
+=head2 C<add_helper>
+
+    Adds a new helper.
+
+    $haml->add_helper(current_time => sub { time });
+
+=head2 C<render>
+
+    Renders Haml string. Returns undef on error. See error attribute.
+
+    my $text = $haml->render('%p foo');
+
+    my $text = $haml->render('%p var', var => 'hello');
+
+=head2 C<render_file>
+
+    A helper method that loads a file and passes it to the render method.
+
+    my $text = $haml->render_file('foo.haml');
+
+=head1 PERL SPECIFIC IMPLEMENTATION ISSUES
+
+=head2 String interpolation
+
+Despite of existing string interpolation in Perl, Ruby interpolation is also
+supported.
+
+$haml->render('%p Hello #{user}', user => 'foo')
+
+=head2 Hash keys
+
+When declaring tag attributes C<:> symbol can be used.
+
+$haml->render("%a{:href => 'bar'}");
+
+Perl-style is supported but not recommented, since your Haml template won't
+work with Ruby Haml implementation parser.
+
+$haml->render("%a{href => 'bar'}");
+
+=head2 Variables
+
+Passed variables are Perl lvalue subroutines and are used without C<$>
+prefix.
+
+$haml->render('%p var', var => 'hello');
+
+But if you declare Perl variable in a block, it must be used with C<$>
+prefix.
+
+$haml->render('<<EOF')
+    - my $foo;
+    %p= $foo
+EOF
+
+=head1 DEVELOPMENT
+
+=head2 Repository
+
+    http://github.com/vti/text-haml/commits/master
+
+=head1 AUTHOR
+
+Viacheslav Tykhanovskyi, C<vti@cpan.org>.
+
+=head1 CREDITS
+
+In alphabetical order:
+
+Norman Clarke
+
+=head1 COPYRIGHT AND LICENSE
+
+Copyright (C) 2009, Viacheslav Tykhanovskyi.
+
+This program is free software, you can redistribute it and/or modify it under
+the terms of the Artistic License version 2.0.
+
+=cut
