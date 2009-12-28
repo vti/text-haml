@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 
-use Test::More tests => 4;
+use Test::More tests => 5;
 
 use Text::Haml;
 
@@ -53,3 +53,14 @@ is($output, <<'EOF');
 </script>
 <p></p>
 EOF
+
+# custom
+$haml->add_filter(compress => sub { $_[0] =~ s/\s+/ /g; $_[0] });
+$output = $haml->render(<<'EOF');
+:compress
+  A    line  with   many   spaces!
+EOF
+is($output, <<'EOF');
+A line with many spaces!
+EOF
+

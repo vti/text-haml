@@ -7,7 +7,7 @@ use IO::File;
 use Scalar::Util qw/weaken/;
 use Encode qw/decode/;
 
-our $VERSION = '0.990101';
+our $VERSION = '0.990102';
 
 use constant CHUNK_SIZE => 4096;
 
@@ -1018,6 +1018,12 @@ L<Text::Haml> implements the following attributes:
     Adds a new helper.
 
     $haml->add_helper(current_time => sub { time });
+
+=head2 C<add_filter>
+
+    Adds a new filter.
+
+    $haml->add_filter(compress => sub { $_[0] =~ s/\s+/ /g; $_[0]});
 
 =head2 C<render>
 
