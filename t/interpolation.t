@@ -10,7 +10,7 @@ use Text::Haml;
 my $haml = Text::Haml->new;
 
 my $output = $haml->render(<<'EOF', quality => 'scrumptious');
-%p This is #{quality} cake!
+%p This is #{$quality} cake!
 EOF
 is($output, <<'EOF');
 <p>This is scrumptious cake!</p>
@@ -24,23 +24,23 @@ EOF
 #EOF
 
 $output = $haml->render(<<'EOF', var => 'foo');
-%p \#{var}
-%p \\#{var}
+%p \#{$var}
+%p \\#{$var}
 EOF
 is($output, <<'EOF');
-<p>#{var}</p>
+<p>#{$var}</p>
 <p>\foo</p>
 EOF
 
 $output = $haml->render(<<'EOF', word => 'yon');
 %p
-  Look at \\#{word} lack of backslash: \#{foo}
-  And yon presence thereof: \{foo}
+  Look at \\#{$word} lack of backslash: \#{$foo}
+  And yon presence thereof: \{$foo}
 EOF
 is($output, <<'EOF');
 <p>
-  Look at \yon lack of backslash: #{foo}
-  And yon presence thereof: \{foo}
+  Look at \yon lack of backslash: #{$foo}
+  And yon presence thereof: \{$foo}
 </p>
 EOF
 #

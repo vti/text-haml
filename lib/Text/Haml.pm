@@ -59,16 +59,17 @@ sub new {
 
     # Default attributes
     my $attrs = {};
-    $attrs->{tape}        = [];
-    $attrs->{encoding}    = 'utf-8';
-    $attrs->{escape_html} = 1;
-    $attrs->{helpers}     = {};
-    $attrs->{format}      = 'xhtml';
-    $attrs->{prepend}     = '';
-    $attrs->{append}      = '';
-    $attrs->{namespace}   = '';
-    $attrs->{vars}        = {};
-    $attrs->{escape}      = <<'EOF';
+    $attrs->{vars_as_subs} = 0;
+    $attrs->{tape}         = [];
+    $attrs->{encoding}     = 'utf-8';
+    $attrs->{escape_html}  = 1;
+    $attrs->{helpers}      = {};
+    $attrs->{format}       = 'xhtml';
+    $attrs->{prepend}      = '';
+    $attrs->{append}       = '';
+    $attrs->{namespace}    = '';
+    $attrs->{vars}         = {};
+    $attrs->{escape}       = <<'EOF';
     my $s = shift;
     $s =~ s/&/&amp;/g;
     $s =~ s/</&lt;/g;
@@ -101,6 +102,10 @@ EOF
 }
 
 # Yes, i know!
+sub vars_as_subs {
+    @_ > 1 ? $_[0]->{vars_as_subs} = $_[1] : $_[0]->{vars_as_subs};
+}
+
 sub format   { @_ > 1 ? $_[0]->{format}   = $_[1] : $_[0]->{format} }
 sub tape     { @_ > 1 ? $_[0]->{tape}     = $_[1] : $_[0]->{tape} }
 sub encoding { @_ > 1 ? $_[0]->{encoding} = $_[1] : $_[0]->{encoding} }
@@ -491,13 +496,6 @@ EOF
     $code .= qq/my \$self = shift;/;
 
     $code .= qq/no strict 'refs'; no warnings 'redefine';/;
-    # Install variables
-    foreach my $var (sort keys %vars) {
-        $code .= qq/sub $var() : lvalue; *$var = sub () : lvalue {\$self->vars->{'$var'}};/;
-    }
-    $code .= qq/use strict; use warnings;/;
-
-    $code .= $self->prepend;
 
     # Install helpers
     for my $name (sort keys %{$self->helpers}) {
@@ -507,6 +505,22 @@ EOF
         $code .= " *$name = sub { \$self";
         $code .= "->helpers->{'$name'}->(\$self->helpers_arg, \@_) };";
     }
+
+    # Install variables
+    foreach my $var (sort keys %vars) {
+        if ($self->vars_as_subs) {
+            next if $self->helpers->{$var};
+            $code
+              .= qq/sub $var() : lvalue; *$var = sub () : lvalue {\$self->vars->{'$var'}};/;
+        }
+        else {
+            $code .= qq/my \$$var = \$self->vars->{'$var'};/;
+        }
+    }
+
+    $code .= qq/use strict; use warnings;/;
+
+    $code .= $self->prepend;
 
     my $stack = [];
 
@@ -979,6 +993,26 @@ L<Text::Haml> implements the following attributes:
 
     Default is on.
 
+=head2 C<vars_as_subs>
+
+When options is B<NOT SET> (by default) passed variables are normal Perl
+variables and are use with C<$> prefix.
+
+    $haml->render('%p $var', var => 'hello');
+
+When this option is B<SET> passed variables are Perl lvalue
+subroutines and are used without C<$> prefix.
+
+    $haml->render('%p var', var => 'hello');
+
+But if you declare Perl variable in a block, it must be used with C<$>
+prefix.
+
+    $haml->render('<<EOF')
+        - my $foo;
+        %p= $foo
+    EOF
+
 =head2 C<helpers>
 
     Holds helpers subroutines. Helpers can be called in Haml text as normal Perl
@@ -1058,21 +1092,6 @@ Perl-style is supported but not recommented, since your Haml template won't
 work with Ruby Haml implementation parser.
 
 $haml->render("%a{href => 'bar'}");
-
-=head2 Variables
-
-Passed variables are Perl lvalue subroutines and are used without C<$>
-prefix.
-
-$haml->render('%p var', var => 'hello');
-
-But if you declare Perl variable in a block, it must be used with C<$>
-prefix.
-
-$haml->render('<<EOF')
-    - my $foo;
-    %p= $foo
-EOF
 
 =head1 DEVELOPMENT
 

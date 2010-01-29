@@ -53,7 +53,7 @@ is($output, <<'EOF');
 EOF
 
 $output = $haml->render(<<'EOF', bar => 'bar');
-%foo{class=>bar}
+%foo{class=>$bar}
 %bar.baz{class=>'bar'}
 EOF
 is($output, <<'EOF');

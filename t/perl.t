@@ -70,24 +70,27 @@ EOF
 $output = $haml->render(<<'EOF');
 %p
   - if (1) {
-    = "1!"
-    %b bonus
+  = "1!"
+  %b bonus
   - } else {
-    = "2?"
+  = "2?"
   - }
+  %foo
 EOF
 is($output, <<'EOF');
 <p>
-    1!
-    <b>bonus</b>
+  1!
+  <b>bonus</b>
+  <foo>
+  </foo>
 </p>
 EOF
 
 # Inserting variables without a $
 $output = $haml->render(<<'EOF', foo => 1, bar => 2);
-= foo + bar
-- foo = 2;
-= foo
+= $foo + $bar
+- $foo = 2;
+= $foo
 EOF
 is($output, <<'EOF');
 3
