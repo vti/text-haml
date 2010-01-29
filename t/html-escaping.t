@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 
-use Test::More tests => 2;
+use Test::More tests => 4;
 
 use Text::Haml;
 
@@ -19,6 +19,20 @@ I like cheese &amp; crackers
 EOF
 
 $haml->escape_html(1);
+
+$output = $haml->render(<<'EOF');
+1 > 2
+EOF
+is($output, <<'EOF');
+1 &gt; 2
+EOF
+
+$output = $haml->render(<<'EOF');
+%foo 1 > 2
+EOF
+is($output, <<'EOF');
+<foo>1 &gt; 2</foo>
+EOF
 
 $output = $haml->render(<<'EOF');
 &= "I like cheese & crackers"

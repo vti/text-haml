@@ -251,6 +251,7 @@ sub parse {
         # Doctype
         if ($line =~ m/^!!!(?: ([^ ]+)(?: (.*))?)?$/) {
             $el->{type} = 'text';
+            $el->{escape} = 0;
             $el->{text} = $self->_doctype($1, $2);
             push @$tape, $el;
             next;
@@ -541,6 +542,12 @@ EOF
             }
         }
 
+        my $escape = '';
+        if ((!exists $el->{escape} && $self->escape_html) || (exists
+                $el->{escape} && $el->{escape} == 1)) {
+            $escape = 'escape';
+        }
+
         if ($el->{line} && $prev_el && $prev_el->{level} >= $el->{level}) {
             while (my $poped = pop @$stack) {
                 my $poped_offset = ' ' x $poped->{level};
@@ -632,9 +639,10 @@ EOF
                 $output .= qq| . "</$el->{name}>"|;
             }
             elsif ($el->{text}) {
-                $output
-                  .= '."' . $self->_parse_text($el->{text}) . '"';
-                $output .= qq|. "</$el->{name}>"| unless $el->{autoclose};
+                $output .= qq/. $escape / . '"'
+                  . $self->_parse_text($el->{text}) . '";';
+                $output .= qq|\$_H .= "</$el->{name}>"|
+                  unless $el->{autoclose};
             }
             elsif (
                 !$self->tape->[$count + 1]
@@ -657,17 +665,11 @@ EOF
             $el->{text} = '' unless defined $el->{text};
 
             if ($el->{expr}) {
-                my $escape = '';
-                if ((!exists $el->{escape} && $self->escape_html) || (exists
-                        $el->{escape} && $el->{escape} == 1)) {
-                    $escape = 'escape';
-                }
-
                 $output .= qq/. $escape / . +$el->{text};
                 $output .= qq/;\$_H .= "\n"/;
             }
             elsif ($el->{text}) {
-                $output .= '."' . $self->_parse_text($el->{text}) . '"';
+                $output .= '.'.qq/$escape /.'"' . $self->_parse_text($el->{text}) . '"';
                 $output .= qq/. "\n"/;
             }
 

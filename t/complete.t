@@ -58,8 +58,8 @@ is($output, <<'EOF');
       </li>
       <li>
         The first character of any line is called
-        the "control character" - it says "make a tag"
-        or "run Ruby code" or all sorts of things.
+        the &quot;control character&quot; - it says &quot;make a tag&quot;
+        or &quot;run Ruby code&quot; or all sorts of things.
       </li>
       <li>
         Text::Haml takes care of nicely indenting your HTML.
@@ -79,7 +79,7 @@ is($output, <<'EOF');
   </div>
   <div class='note'>
     <p>
-      This example doesn't allow Ruby to be executed,
+      This example doesn&apos;t allow Ruby to be executed,
       but real Text::Haml does.
     </p>
     <p>

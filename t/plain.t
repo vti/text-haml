@@ -29,6 +29,7 @@ is($output, <<'EOF');
 </gee>
 EOF
 
+$haml->escape_html(0);
 $output = $haml->render(<<'EOF');
 %p
   <div id="blah">Blah!</div>

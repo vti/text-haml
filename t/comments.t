@@ -25,15 +25,15 @@ EOF
 
 $output = $haml->render(<<'EOF');
 /
-  %p This doesn't render...
+  %p This does not render...
   %div
-    %h1 Because it's commented out!
+    %h1 Because it is commented out!
 EOF
 is($output, <<'EOF');
 <!--
-  <p>This doesn't render...</p>
+  <p>This does not render...</p>
   <div>
-    <h1>Because it's commented out!</h1>
+    <h1>Because it is commented out!</h1>
   </div>
 -->
 EOF
