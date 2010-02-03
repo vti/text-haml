@@ -635,7 +635,7 @@ EOF
             $output .= qq|"$offset<$el->{name}$tail$attrs$ending>"|;
 
             if ($el->{text} && $el->{expr}) {
-                $output .= '. ' . $el->{text};
+                $output .= '. (' . $el->{text} . ')';
                 $output .= qq| . "</$el->{name}>"|;
             }
             elsif ($el->{text}) {

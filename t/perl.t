@@ -5,7 +5,7 @@ use warnings;
 
 use Text::Haml;
 
-use Test::More tests => 8;
+use Test::More tests => 9;
 
 my $haml = Text::Haml->new;
 
@@ -20,6 +20,13 @@ is($output, <<'EOF');
   hi there reader!
   yo
 </p>
+EOF
+
+$output = $haml->render(<<'EOF');
+%a= 0 || 1
+EOF
+is($output, <<'EOF');
+<a>1</a>
 EOF
 
 $output = $haml->render(<<'EOF');
