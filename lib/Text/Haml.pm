@@ -118,13 +118,21 @@ sub escape_html {
 sub code     { @_ > 1 ? $_[0]->{code}     = $_[1] : $_[0]->{code} }
 sub compiled { @_ > 1 ? $_[0]->{compiled} = $_[1] : $_[0]->{compiled} }
 sub helpers  { @_ > 1 ? $_[0]->{helpers}  = $_[1] : $_[0]->{helpers} }
-sub helpers_arg  { @_ > 1 ? $_[0]->{helpers_arg}  = $_[1] :
-    $_[0]->{helpers_arg} }
 sub filters  { @_ > 1 ? $_[0]->{filters}  = $_[1] : $_[0]->{filters} }
 sub prepend  { @_ > 1 ? $_[0]->{prepend}  = $_[1] : $_[0]->{prepend} }
 sub append   { @_ > 1 ? $_[0]->{append}   = $_[1] : $_[0]->{append} }
 sub escape   { @_ > 1 ? $_[0]->{escape}   = $_[1] : $_[0]->{escape} }
-sub vars   { @_ > 1 ? $_[0]->{vars}   = $_[1] : $_[0]->{vars} }
+sub vars     { @_ > 1 ? $_[0]->{vars}     = $_[1] : $_[0]->{vars} }
+
+sub helpers_arg {
+    if (@_ > 1) {
+        $_[0]->{helpers_arg} = $_[1];
+        weaken $_[0]->{helpers_arg};
+    }
+    else {
+        return $_[0]->{helpers_arg};
+    }
+}
 
 sub namespace {
     @_ > 1
