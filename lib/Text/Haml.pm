@@ -837,6 +837,9 @@ sub interpret {
 
     my $output = eval { $compiled->($self) };
 
+    # Destroy variables refs to avoid memory leaks
+    $self->vars({});
+
     if ($@) {
         $self->error($@);
         return undef;
