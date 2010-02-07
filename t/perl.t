@@ -59,18 +59,21 @@ EOF
 
 # Perl Blocks
 $output = $haml->render(<<'EOF');
+%ul
 - for my $i (42..47) {
-  %p= $i
+  %li= $i
 - }
 %p See, I can count!
 EOF
 is($output, <<'EOF');
-  <p>42</p>
-  <p>43</p>
-  <p>44</p>
-  <p>45</p>
-  <p>46</p>
-  <p>47</p>
+<ul>
+  <li>42</li>
+  <li>43</li>
+  <li>44</li>
+  <li>45</li>
+  <li>46</li>
+  <li>47</li>
+</ul>
 <p>See, I can count!</p>
 EOF
 
