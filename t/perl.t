@@ -5,7 +5,7 @@ use warnings;
 
 use Text::Haml;
 
-use Test::More tests => 9;
+use Test::More tests => 10;
 
 my $haml = Text::Haml->new;
 
@@ -96,7 +96,7 @@ is($output, <<'EOF');
 </p>
 EOF
 
-# Inserting variables without a $
+# Inserting variables
 $output = $haml->render(<<'EOF', foo => 1, bar => 2);
 = $foo + $bar
 - $foo = 2;
@@ -105,4 +105,12 @@ EOF
 is($output, <<'EOF');
 3
 2
+EOF
+
+# Inserting variables with special symbols
+$output = $haml->render(<<'EOF', 'foo.bar' => 1);
+Nothing is exported
+EOF
+is($output, <<'EOF');
+Nothing is exported
 EOF

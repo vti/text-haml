@@ -7,7 +7,7 @@ use IO::File;
 use Scalar::Util qw/weaken/;
 use Encode qw/decode/;
 
-our $VERSION = '0.990102';
+our $VERSION = '0.990103';
 
 use constant CHUNK_SIZE => 4096;
 
@@ -529,6 +529,7 @@ EOF
 
     # Install variables
     foreach my $var (sort keys %vars) {
+        next unless $var =~ m/^\w+$/;
         if ($self->vars_as_subs) {
             next if $self->helpers->{$var};
             $code
