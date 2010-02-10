@@ -59,6 +59,7 @@ sub new {
 
     # Default attributes
     my $attrs = {};
+    $attrs->{pretty}       = 1;
     $attrs->{vars_as_subs} = 0;
     $attrs->{tape}         = [];
     $attrs->{encoding}     = 'utf-8';
@@ -106,6 +107,7 @@ sub vars_as_subs {
     @_ > 1 ? $_[0]->{vars_as_subs} = $_[1] : $_[0]->{vars_as_subs};
 }
 
+sub pretty   { @_ > 1 ? $_[0]->{pretty}   = $_[1] : $_[0]->{pretty} }
 sub format   { @_ > 1 ? $_[0]->{format}   = $_[1] : $_[0]->{format} }
 sub tape     { @_ > 1 ? $_[0]->{tape}     = $_[1] : $_[0]->{tape} }
 sub encoding { @_ > 1 ? $_[0]->{encoding} = $_[1] : $_[0]->{encoding} }
@@ -470,9 +472,9 @@ sub parse {
 
             # Continue concatenation
             else {
-                my $prev_el = $tape->[-1];
-                push @{$prev_el->{text}}, $line;
-                $prev_el->{line} .= $line . "$1|\n";
+                my $prev_stack_el = $tape->[-1];
+                push @{$prev_stack_el->{text}}, $line;
+                $prev_stack_el->{line} .= $line . "$1|\n";
             }
         }
 
@@ -547,15 +549,22 @@ EOF
     my $stack = [];
 
     my @lines;
-    my $count = 0;
+    my $count    = 0;
+    my $in_block = 0;
     for my $el (@{$self->tape}) {
+        my $level = $el->{level};
+        $level -= 2 * $in_block if $in_block;
+
         my $offset = '';
-        $offset .= ' ' x $el->{level};
+        $offset .= ' ' x $level;
 
-        my $prev_el = $stack->[-1];
+        my $prev_el = $self->tape->[$count - 1];
+        my $next_el = $self->tape->[$count + 1];
 
-        if ($prev_el && $prev_el->{type} eq 'comment') {
-            if ($prev_el->{level} == $el->{level}) {
+        my $prev_stack_el = $stack->[-1];
+
+        if ($prev_stack_el && $prev_stack_el->{type} eq 'comment') {
+            if ($prev_stack_el->{level} == $el->{level}) {
                 pop @$stack;
             }
             else {
@@ -570,13 +579,14 @@ EOF
             $escape = 'escape';
         }
 
-        if (   $el->{type} ne 'block'
-            && $el->{line}
-            && $prev_el
-            && $prev_el->{level} >= $el->{level})
+        if (   $el->{line}
+            && $prev_stack_el
+            && $prev_stack_el->{level} >= $el->{level})
         {
             while (my $poped = pop @$stack) {
-                my $poped_offset = ' ' x $poped->{level};
+                my $level = $poped->{level};
+                $level -= 2 * $in_block if $in_block;
+                my $poped_offset = ' ' x $level;
 
                 my $ending = '';
                 if ($poped->{type} eq 'tag') {
@@ -586,7 +596,10 @@ EOF
                     $ending .= "<![endif]" if $poped->{if};
                     $ending .= "-->";
                 }
-                push @lines, qq|\$_H .= "$poped_offset$ending\n";|;
+
+                if ($poped->{type} ne 'block') {
+                    push @lines, qq|\$_H .= "$poped_offset$ending\n";|;
+                }
 
                 last if $poped->{level} == $el->{level};
             }
@@ -671,19 +684,12 @@ EOF
                   unless $el->{autoclose};
             }
             elsif (
-                !$self->tape->[$count + 1]
-                || (   $self->tape->[$count + 1]
-                    && $self->tape->[$count + 1]->{level} == $el->{level})
+                !$next_el
+                || (   $next_el
+                    && $next_el->{level} <= $el->{level})
               )
             {
-                if (  !$self->tape->[$count + 1]
-                    || $self->tape->[$count + 1]->{type} ne 'block')
-                {
-                    $output .= qq|. "</$el->{name}>"| unless $el->{autoclose};
-                }
-                else {
-                    push @$stack, $el;
-                }
+                $output .= qq|. "</$el->{name}>"| unless $el->{autoclose};
             }
             elsif (!$el->{autoclose}) {
                 push @$stack, $el;
@@ -712,7 +718,16 @@ EOF
             $output .= qq/;/;
         }
         elsif ($el->{type} eq 'block') {
-            push @lines, $el->{text};
+            push @lines,  $el->{text};
+            push @$stack, $el;
+
+            if ($prev_el && $prev_el->{level} > $el->{level}) {
+                $in_block--;
+            }
+
+            if ($next_el && $next_el->{level} > $el->{level}) {
+                $in_block++;
+            }
         }
         elsif ($el->{type} eq 'html_comment') {
             $output = qq/"$offset"/;

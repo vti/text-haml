@@ -5,20 +5,21 @@ use warnings;
 
 use Text::Haml;
 
-use Test::More tests => 10;
+use Test::More tests => 12;
 
 my $haml = Text::Haml->new;
+my $output;
 
 # Inserting Perl: =
-my $output = $haml->render(<<'EOF');
+$output = $haml->render(<<'EOF');
 %p
-  = join(' ', 'hi', 'there', 'reader!')
-  = "yo"
+ = join(' ', 'hi', 'there', 'reader!')
+ = "yo"
 EOF
 is($output, <<'EOF');
 <p>
-  hi there reader!
-  yo
+ hi there reader!
+ yo
 </p>
 EOF
 
@@ -60,39 +61,89 @@ EOF
 # Perl Blocks
 $output = $haml->render(<<'EOF');
 %ul
-- for my $i (42..47) {
-  %li= $i
-- }
+ - for my $i (42..47) {
+   %li= $i
+ - }
 %p See, I can count!
 EOF
 is($output, <<'EOF');
 <ul>
-  <li>42</li>
-  <li>43</li>
-  <li>44</li>
-  <li>45</li>
-  <li>46</li>
-  <li>47</li>
+ <li>42</li>
+ <li>43</li>
+ <li>44</li>
+ <li>45</li>
+ <li>46</li>
+ <li>47</li>
 </ul>
 <p>See, I can count!</p>
 EOF
 
 $output = $haml->render(<<'EOF');
-%p
-  - if (1) {
-  = "1!"
-  %b bonus
-  - } else {
-  = "2?"
+%ul
+ - foreach (1..3) {
+   %li
+     %foo
+ - }
+%p End
+EOF
+is($output, <<'EOF');
+<ul>
+ <li>
+   <foo></foo>
+ </li>
+ <li>
+   <foo></foo>
+ </li>
+ <li>
+   <foo></foo>
+ </li>
+</ul>
+<p>End</p>
+EOF
+
+$output = $haml->render(<<'EOF');
+%ul
+  - foreach (1..1) {
+    %li
+      - my $i = 0;
+      - my $j = 1;
+      %a(href="#")= $i || $j
+      %form(method="post")
+        - if (1) {
+          %button Foo
+        - } else {
+          %button Bar
+        - }
   - }
-  %foo
+%p End
+EOF
+is($output, <<'EOF');
+<ul>
+  <li>
+    <a href='#'>1</a>
+    <form method='post'>
+      <button>Foo</button>
+    </form>
+  </li>
+</ul>
+<p>End</p>
+EOF
+
+$output = $haml->render(<<'EOF');
+%p
+ - if (1) {
+   = "1!"
+   %b bonus
+ - } else {
+   = "2?"
+ - }
+ %foo
 EOF
 is($output, <<'EOF');
 <p>
-  1!
-  <b>bonus</b>
-  <foo>
-  </foo>
+ 1!
+ <b>bonus</b>
+ <foo></foo>
 </p>
 EOF
 
