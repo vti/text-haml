@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 
-use Test::More tests => 5;
+use Test::More tests => 6;
 
 use Text::Haml;
 
@@ -64,3 +64,11 @@ is($output, <<'EOF');
 A line with many spaces!
 EOF
 
+# :plain
+$output = $haml->render(<<'EOF');
+:plain 
+  This is a plain text - filter name with trailing whitespace.
+EOF
+is($output, <<'EOF');
+This is a plain text - filter name with trailing whitespace.
+EOF

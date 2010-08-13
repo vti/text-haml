@@ -253,7 +253,7 @@ sub parse {
         }
 
         # Filter
-        if ($line =~ m/^:(.*)/) {
+        if ($line =~ m/^:(\w+)/) {
             $el->{type} = 'filter';
             $el->{name} = $1;
             $el->{text} = '';
