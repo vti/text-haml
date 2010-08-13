@@ -548,29 +548,17 @@ EOF
 
     my $stack = [];
 
+    my $output = '';
     my @lines;
     my $count    = 0;
     my $in_block = 0;
+  ELEM:
     for my $el (@{$self->tape}) {
         my $level = $el->{level};
         $level -= 2 * $in_block if $in_block;
 
         my $offset = '';
         $offset .= ' ' x $level;
-
-        my $prev_el = $self->tape->[$count - 1];
-        my $next_el = $self->tape->[$count + 1];
-
-        my $prev_stack_el = $stack->[-1];
-
-        if ($prev_stack_el && $prev_stack_el->{type} eq 'comment') {
-            if ($prev_stack_el->{level} == $el->{level}) {
-                pop @$stack;
-            }
-            else {
-                next;
-            }
-        }
 
         my $escape = '';
         if (   (!exists $el->{escape} && $self->escape_html)
@@ -579,11 +567,27 @@ EOF
             $escape = 'escape';
         }
 
+        my $prev_el = $self->tape->[$count - 1];
+        my $next_el = $self->tape->[$count + 1];
+
+        my $prev_stack_el = $stack->[-1];
+
+        if ($prev_stack_el && $prev_stack_el->{type} eq 'comment') {
+            if (   $el->{line}
+                && $prev_stack_el->{level} >= $el->{level}) {
+                pop @$stack;
+            }
+            else {
+                next ELEM;
+            }
+        }
+
         if (   $el->{line}
             && $prev_stack_el
             && $prev_stack_el->{level} >= $el->{level})
         {
-            while (my $poped = pop @$stack) {
+	STACKEDBLK:
+            while ( my $poped = pop @$stack) {
                 my $level = $poped->{level};
                 $level -= 2 * $in_block if $in_block;
                 my $poped_offset = ' ' x $level;
@@ -601,17 +605,20 @@ EOF
                     push @lines, qq|\$_H .= "$poped_offset$ending\n";|;
                 }
 
-                last if $poped->{level} == $el->{level};
+                last STACKEDBLK if $poped->{level} == $el->{level};
             }
         }
 
-        my $output = '';
+
+      SWITCH: {
+
         if ($el->{type} eq 'tag') {
             my $ending =
               $el->{autoclose} && $self->format eq 'xhtml' ? ' /' : '';
 
             my $attrs = '';
             if ($el->{attrs}) {
+	    ATTR:
                 for (my $i = 0; $i < @{$el->{attrs}}; $i += 2) {
                     my $name  = $el->{attrs}->[$i];
                     my $value = $el->{attrs}->[$i + 1];
@@ -625,13 +632,13 @@ EOF
                         else {
                             push @{$el->{class}}, qq/" . $text . "/;
                         }
-                        next;
+                        next ATTR;
                     }
                     elsif ($name eq 'id') {
                         $el->{id} ||= '';
                         $el->{id} = $el->{id} . '_' if $el->{id};
                         $el->{id} .= $value->{text};
-                        next;
+                        next ATTR;
                     }
 
                     if ($value->{type} eq 'text' || $value->{type} eq 'expr')
@@ -655,7 +662,7 @@ EOF
                             $attrs .= qq/'$name'/;
                         }
                     }
-                }
+                } #end:for ATTR
             }
 
             my $tail = '';
@@ -697,8 +704,10 @@ EOF
 
             $output .= qq|. "\n"|;
             $output .= qq|;|;
+            last SWITCH;
         }
-        elsif ($el->{type} eq 'text') {
+
+        if ($el->{line} && $el->{type} eq 'text') {
             $output = qq/"$offset"/;
 
             $el->{text} = '' unless defined $el->{text};
@@ -716,8 +725,10 @@ EOF
             }
 
             $output .= qq/;/;
+            last SWITCH;
         }
-        elsif ($el->{type} eq 'block') {
+
+        if ($el->{type} eq 'block') {
             push @lines,  $el->{text};
             push @$stack, $el;
 
@@ -728,8 +739,10 @@ EOF
             if ($next_el && $next_el->{level} > $el->{level}) {
                 $in_block++;
             }
+            last SWITCH;
         }
-        elsif ($el->{type} eq 'html_comment') {
+
+        if ($el->{type} eq 'html_comment') {
             $output = qq/"$offset"/;
 
             $output .= qq/ . "<!--"/;
@@ -744,11 +757,15 @@ EOF
             }
 
             $output .= qq/;/;
+            last SWITCH;
         }
-        elsif ($el->{type} eq 'comment') {
+
+        if ($el->{type} eq 'comment') {
             push @$stack, $el;
+            last SWITCH;
         }
-        elsif ($el->{type} eq 'filter') {
+
+        if ($el->{type} eq 'filter') {
             my $filter = $self->filters->{$el->{name}};
             die "unknown filter: $el->{name}" unless $filter;
 
@@ -763,20 +780,28 @@ EOF
                 $text =~ s/\\\n/\\n/g;
                 $output = qq/"/ . $text . qq/\n";/;
             }
-        }
-        else {
-            die "unknown type=" . $el->{type};
+            last SWITCH;
         }
 
+        unless ($el->{text}) {
+            last SWITCH;
+        }
+
+        die "unknown type=" . $el->{type};
+
+      } #end:SWITCH
+    } #end:ELEM
+    continue {
         push @lines, '$_H .= ' . $output if $output;
-
+        $output = '';
         $count++;
-    }
+    } #ELEM
 
     my $last_empty_line = 0;
     $last_empty_line = 1
       if $self->tape->[-1] && $self->tape->[-1]->{line} eq '';
 
+    # Close remaining content blocks, last-seen first
     foreach my $el (reverse @$stack) {
         my $offset = ' ' x $el->{level};
         my $ending = '';

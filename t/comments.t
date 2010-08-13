@@ -5,7 +5,7 @@ use warnings;
 
 use Text::Haml;
 
-use Test::More tests => 5;
+use Test::More tests => 10;
 
 my $haml = Text::Haml->new;
 
@@ -52,7 +52,7 @@ is($output, <<'EOF');
 <![endif]-->
 EOF
 
-# Text::Haml Comments: -#
+# Text::Haml Comments: Inline -#
 $output = $haml->render(<<'EOF');
 %p foo
 -# This is a comment
@@ -63,6 +63,7 @@ is($output, <<'EOF');
 <p>bar</p>
 EOF
 
+# Text::Haml Comments: Nested -#
 $output = $haml->render(<<'EOF');
 %p foo
 -#
@@ -73,4 +74,114 @@ EOF
 is($output, <<'EOF');
 <p>foo</p>
 <p>bar</p>
+EOF
+
+# Text::Haml Comments: Nested with Following Nested Tag -#
+$output = $haml->render(<<'EOF');
+%p foo
+-#
+  These two lines together
+  No space between the two lines or below
+%p
+  bar
+%p
+  baz
+EOF
+is($output, <<'EOF');
+<p>foo</p>
+<p>
+  bar
+</p>
+<p>
+  baz
+</p>
+EOF
+
+# Text::Haml Comments: Nested with Following Nested Tag -#
+$output = $haml->render(<<'EOF');
+%p foo
+-#
+  These two lines together
+  No space between the two lines; one+ space below
+
+%p
+  bar
+%p
+  baz
+EOF
+is($output, <<'EOF');
+<p>foo</p>
+<p>
+  bar
+</p>
+<p>
+  baz
+</p>
+EOF
+
+# Text::Haml Comments: Nested with Following Nested Tag -#
+$output = $haml->render(<<'EOF');
+%p foo
+-#
+  These two lines together
+
+  Space between the two lines; one+ space below
+
+%p
+  bar
+%p
+  baz
+EOF
+is($output, <<'EOF');
+<p>foo</p>
+<p>
+  bar
+</p>
+<p>
+  baz
+</p>
+EOF
+
+# Text::Haml Comments: Nested with Following Nested Tag -#
+$output = $haml->render(<<'EOF');
+%p foo
+-#
+  These two lines together
+  No space between the two lines; one+ space below; space btwn %p
+
+%p
+  bar
+
+%p
+  baz
+EOF
+is($output, <<'EOF');
+<p>foo</p>
+<p>
+  bar
+</p>
+<p>
+  baz
+</p>
+EOF
+
+# Text::Haml Comments: Nested with Following Empty Line then Nested Tag -#
+$output = $haml->render(<<'EOF');
+%p foo
+ -#
+   This won't be displayed, even with improper indent
+   But the two following nested elements should.
+%p
+  bar
+%p
+  baz
+EOF
+is($output, <<'EOF');
+<p>foo</p>
+<p>
+  bar
+</p>
+<p>
+  baz
+</p>
 EOF
