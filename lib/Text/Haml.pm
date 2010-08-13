@@ -7,7 +7,7 @@ use IO::File;
 use Scalar::Util qw/weaken/;
 use Encode qw/decode/;
 
-our $VERSION = '0.990103';
+our $VERSION = '0.990104';
 
 use constant CHUNK_SIZE => 4096;
 
@@ -1173,11 +1173,13 @@ Viacheslav Tykhanovskyi, C<vti@cpan.org>.
 
 In alphabetical order:
 
+Nick Ragouzis
+
 Norman Clarke
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright (C) 2009, Viacheslav Tykhanovskyi.
+Copyright (C) 2009-2010, Viacheslav Tykhanovskyi.
 
 This program is free software, you can redistribute it and/or modify it under
 the terms of the Artistic License version 2.0.

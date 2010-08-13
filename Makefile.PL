@@ -1,13 +1,13 @@
 #!/usr/bin/env perl
 
-use 5.008001;
+use 5.008007;
 
 use strict;
 use warnings;
 
 use ExtUtils::MakeMaker;
 
-my $mm = $ExtUtils::MakeMaker::VERSION;
+my ($mm) = $ExtUtils::MakeMaker::VERSION =~ /^([^_]+)/;
 
 WriteMakefile(
     NAME         => 'Text::Haml',
@@ -20,11 +20,10 @@ WriteMakefile(
     (   $mm < 6.46
         ? ()
         : ( META_MERGE => {
-                requires  => {perl => '5.008001'},
+                requires  => {perl => '5.008007'},
                 resources => {
-                    homepage => 'http://mojolicious.org',
-                    license  => 'http://dev.perl.org/licenses/',
-                    repository => 'http://github.com/vti/text-haml/tree/master'
+                    license    => 'http://dev.perl.org/licenses/',
+                    repository => 'http://github.com/vti/text-haml'
                 },
                 no_index => {directory => [qw/t/]}
             },
@@ -35,5 +34,10 @@ WriteMakefile(
         )
     ),
 
+    PREREQ_PM => {
+        'IO::File'     => '0',
+        'Scalar::Util' => '0',
+        'Encode'       => '0',
+    },
     test => {TESTS => 't/*.t t/*/*.t t/*/*/*.t t/*/*/*/*.t'}
 );
