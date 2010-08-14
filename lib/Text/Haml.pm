@@ -59,7 +59,6 @@ sub new {
 
     # Default attributes
     my $attrs = {};
-    $attrs->{pretty}       = 1;
     $attrs->{vars_as_subs} = 0;
     $attrs->{tape}         = [];
     $attrs->{encoding}     = 'utf-8';
@@ -107,9 +106,7 @@ sub vars_as_subs {
     @_ > 1 ? $_[0]->{vars_as_subs} = $_[1] : $_[0]->{vars_as_subs};
 }
 
-sub pretty   { @_ > 1 ? $_[0]->{pretty}   = $_[1] : $_[0]->{pretty} }
 sub format   { @_ > 1 ? $_[0]->{format}   = $_[1] : $_[0]->{format} }
-sub tape     { @_ > 1 ? $_[0]->{tape}     = $_[1] : $_[0]->{tape} }
 sub encoding { @_ > 1 ? $_[0]->{encoding} = $_[1] : $_[0]->{encoding} }
 
 sub escape_html {
@@ -124,6 +121,7 @@ sub filters  { @_ > 1 ? $_[0]->{filters}  = $_[1] : $_[0]->{filters} }
 sub prepend  { @_ > 1 ? $_[0]->{prepend}  = $_[1] : $_[0]->{prepend} }
 sub append   { @_ > 1 ? $_[0]->{append}   = $_[1] : $_[0]->{append} }
 sub escape   { @_ > 1 ? $_[0]->{escape}   = $_[1] : $_[0]->{escape} }
+sub tape     { @_ > 1 ? $_[0]->{tape}     = $_[1] : $_[0]->{tape} }
 sub vars     { @_ > 1 ? $_[0]->{vars}     = $_[1] : $_[0]->{vars} }
 
 sub helpers_arg {
@@ -1058,21 +1056,29 @@ features. Do not expect Ruby specific things to work.
 
 L<Text::Haml> implements the following attributes:
 
-=head2 C<format>
+=head2 C<append>
 
-    Supported formats: xhtml, html, html5.
+Holds the string of code that is appended to the generated Perl code.
 
-    Default is xhtml.
+=head2 C<code>
+
+Holds the Perl code.
+
+=head2 C<compiled>
+
+Holds compiled code.
 
 =head2 C<encoding>
 
-    Default is utf-8.
+    $haml->encoding('utf-8');
+
+Default is utf-8.
 
 =head2 C<escape>
 
-    Escape subroutine presented as string.
+Escape subroutine presented as string.
 
-    Default is
+Default is
 
     $haml->escape(<<'EOF');
         my $s = shift;
@@ -1086,14 +1092,38 @@ L<Text::Haml> implements the following attributes:
 
 =head2 C<escape_html>
 
-    Switch on/off Haml output html escaping.
+    $haml->escape_html(0);
 
-    Default is on.
+Switch on/off Haml output html escaping. Default is on.
+
+=head2 C<filters>
+
+Holds filters.
+
+=head2 C<format>
+
+    $haml->format('xhtml');
+
+Supported formats: xhtml, html, html5.
+
+Default is xhtml.
+
+=head2 C<namespace>
+
+Holds the namespace under which the Perl package is generated.
+
+=head2 C<prepend>
+
+Holds the string of code that is prepended to the generated Perl code.
+
+=head2 C<vars>
+
+Holds the variables that are passed during the rendering.
 
 =head2 C<vars_as_subs>
 
 When options is B<NOT SET> (by default) passed variables are normal Perl
-variables and are use with C<$> prefix.
+variables and are used with C<$> prefix.
 
     $haml->render('%p $var', var => 'hello');
 
@@ -1112,9 +1142,6 @@ prefix.
 
 =head2 C<helpers>
 
-    Holds helpers subroutines. Helpers can be called in Haml text as normal Perl
-    functions. See also add_helper.
-
     helpers => {
         foo => sub {
             my $self   = shift;
@@ -1126,17 +1153,24 @@ prefix.
         }
     }
 
-=head2 C<helpers_arg>
+Holds helpers subroutines. Helpers can be called in Haml text as normal Perl
+functions. See also add_helper.
 
-    First argument passed to the helper.
+=head2 C<helpers_arg>
 
     $haml->helpers_args($my_context);
 
-    Deafault is Text::Haml instance.
+First argument passed to the helper (L<Text::Haml> instance by default).
 
 =head2 C<error>
 
-    Holds last error.
+    $haml->error;
+
+Holds the last error.
+
+=head2 C<tape>
+
+Holds parsed haml elements.
 
 =head1 METHODS
 
@@ -1146,29 +1180,53 @@ prefix.
 
 =head2 C<add_helper>
 
-    Adds a new helper.
-
     $haml->add_helper(current_time => sub { time });
+
+Adds a new helper.
 
 =head2 C<add_filter>
 
-    Adds a new filter.
-
     $haml->add_filter(compress => sub { $_[0] =~ s/\s+/ /g; $_[0]});
 
-=head2 C<render>
+Adds a new filter.
 
-    Renders Haml string. Returns undef on error. See error attribute.
+=head2 C<build>
+
+    $haml->build(@_);
+
+Builds the Perl code.
+
+=head2 C<compile>
+
+    $haml->compile;
+
+Compiles parsed code.
+
+=head2 C<interpret>
+
+    $haml->interpret(@_);
+
+Interprets compiled code.
+
+=head2 C<parse>
+
+    $haml->parse('%p foo');
+
+Parses Haml string building a tree.
+
+=head2 C<render>
 
     my $text = $haml->render('%p foo');
 
     my $text = $haml->render('%p var', var => 'hello');
 
+Renders Haml string. Returns undef on error. See error attribute.
+
 =head2 C<render_file>
 
-    A helper method that loads a file and passes it to the render method.
-
     my $text = $haml->render_file('foo.haml');
+
+A helper method that loads a file and passes it to the render method.
 
 =head1 PERL SPECIFIC IMPLEMENTATION ISSUES
 
@@ -1194,7 +1252,7 @@ $haml->render("%a{href => 'bar'}");
 
 =head2 Repository
 
-    http://github.com/vti/text-haml/commits/master
+    http://github.com/vti/text-haml
 
 =head1 AUTHOR
 
