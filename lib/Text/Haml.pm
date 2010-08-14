@@ -574,7 +574,8 @@ EOF
 
         if ($prev_stack_el && $prev_stack_el->{type} eq 'comment') {
             if (   $el->{line}
-                && $prev_stack_el->{level} >= $el->{level}) {
+                && $prev_stack_el->{level} >= $el->{level})
+            {
                 pop @$stack;
             }
             else {
@@ -586,8 +587,8 @@ EOF
             && $prev_stack_el
             && $prev_stack_el->{level} >= $el->{level})
         {
-	STACKEDBLK:
-            while ( my $poped = pop @$stack) {
+          STACKEDBLK:
+            while (my $poped = pop @$stack) {
                 my $level = $poped->{level};
                 $level -= 2 * $in_block if $in_block;
                 my $poped_offset = ' ' x $level;
@@ -612,190 +613,195 @@ EOF
 
       SWITCH: {
 
-        if ($el->{type} eq 'tag') {
-            my $ending =
-              $el->{autoclose} && $self->format eq 'xhtml' ? ' /' : '';
+            if ($el->{type} eq 'tag') {
+                my $ending =
+                  $el->{autoclose} && $self->format eq 'xhtml' ? ' /' : '';
 
-            my $attrs = '';
-            if ($el->{attrs}) {
-	    ATTR:
-                for (my $i = 0; $i < @{$el->{attrs}}; $i += 2) {
-                    my $name  = $el->{attrs}->[$i];
-                    my $value = $el->{attrs}->[$i + 1];
-                    my $text  = $value->{text};
+                my $attrs = '';
+                if ($el->{attrs}) {
+                  ATTR:
+                    for (my $i = 0; $i < @{$el->{attrs}}; $i += 2) {
+                        my $name  = $el->{attrs}->[$i];
+                        my $value = $el->{attrs}->[$i + 1];
+                        my $text  = $value->{text};
 
-                    if ($name eq 'class') {
-                        $el->{class} ||= [];
-                        if ($value->{type} eq 'text') {
-                            push @{$el->{class}}, $text;
+                        if ($name eq 'class') {
+                            $el->{class} ||= [];
+                            if ($value->{type} eq 'text') {
+                                push @{$el->{class}}, $text;
+                            }
+                            else {
+                                push @{$el->{class}}, qq/" . $text . "/;
+                            }
+                            next ATTR;
                         }
-                        else {
-                            push @{$el->{class}}, qq/" . $text . "/;
+                        elsif ($name eq 'id') {
+                            $el->{id} ||= '';
+                            $el->{id} = $el->{id} . '_' if $el->{id};
+                            $el->{id} .= $value->{text};
+                            next ATTR;
                         }
-                        next ATTR;
-                    }
-                    elsif ($name eq 'id') {
-                        $el->{id} ||= '';
-                        $el->{id} = $el->{id} . '_' if $el->{id};
-                        $el->{id} .= $value->{text};
-                        next ATTR;
-                    }
 
-                    if ($value->{type} eq 'text' || $value->{type} eq 'expr')
-                    {
-                        $attrs .= ' ';
-                        $attrs .= $name;
-                        $attrs .= '=';
-
-                        if ($value->{type} eq 'text') {
-                            $attrs .= "'" . $self->_parse_text($text) . "'";
-                        }
-                        else {
-                            $attrs .= qq/'" . $text . "'/;
-                        }
-                    }
-                    elsif ($value->{type} eq 'boolean' && $value->{text}) {
-                        $attrs .= ' ';
-                        $attrs .= $name;
-                        if ($self->format eq 'xhtml') {
+                        if (   $value->{type} eq 'text'
+                            || $value->{type} eq 'expr')
+                        {
+                            $attrs .= ' ';
+                            $attrs .= $name;
                             $attrs .= '=';
-                            $attrs .= qq/'$name'/;
+
+                            if ($value->{type} eq 'text') {
+                                $attrs
+                                  .= "'" . $self->_parse_text($text) . "'";
+                            }
+                            else {
+                                $attrs .= qq/'" . $text . "'/;
+                            }
                         }
-                    }
-                } #end:for ATTR
+                        elsif ($value->{type} eq 'boolean' && $value->{text})
+                        {
+                            $attrs .= ' ';
+                            $attrs .= $name;
+                            if ($self->format eq 'xhtml') {
+                                $attrs .= '=';
+                                $attrs .= qq/'$name'/;
+                            }
+                        }
+                    }    #end:for ATTR
+                }
+
+                my $tail = '';
+                if ($el->{class}) {
+                    $tail .= qq/ class='"./;
+                    $tail .= qq/join(' ', sort(/;
+                    $tail .= join(',', map {"\"$_\""} @{$el->{class}});
+                    $tail .= qq/))/;
+                    $tail .= qq/."'/;
+                }
+
+                if ($el->{id}) {
+                    $tail .= qq/ id='$el->{id}'/;
+                }
+
+                $output .= qq|"$offset<$el->{name}$tail$attrs$ending>"|;
+
+                if ($el->{text} && $el->{expr}) {
+                    $output .= '. (do {' . $el->{text} . '} || "")';
+                    $output .= qq| . "</$el->{name}>"|;
+                }
+                elsif ($el->{text}) {
+                    $output .= qq/. $escape / . '"'
+                      . $self->_parse_text($el->{text}) . '";';
+                    $output .= qq|\$_H .= "</$el->{name}>"|
+                      unless $el->{autoclose};
+                }
+                elsif (
+                    !$next_el
+                    || (   $next_el
+                        && $next_el->{level} <= $el->{level})
+                  )
+                {
+                    $output .= qq|. "</$el->{name}>"| unless $el->{autoclose};
+                }
+                elsif (!$el->{autoclose}) {
+                    push @$stack, $el;
+                }
+
+                $output .= qq|. "\n"|;
+                $output .= qq|;|;
+                last SWITCH;
             }
 
-            my $tail = '';
-            if ($el->{class}) {
-                $tail .= qq/ class='"./;
-                $tail .= qq/join(' ', sort(/;
-                $tail .= join(',', map {"\"$_\""} @{$el->{class}});
-                $tail .= qq/))/;
-                $tail .= qq/."'/;
+            if ($el->{line} && $el->{type} eq 'text') {
+                $output = qq/"$offset"/;
+
+                $el->{text} = '' unless defined $el->{text};
+
+                if ($el->{expr}) {
+                    $output .= qq/. $escape / . +$el->{text};
+                    $output .= qq/;\$_H .= "\n"/;
+                }
+                elsif ($el->{text}) {
+                    $output
+                      .= '.'
+                      . qq/$escape / . '"'
+                      . $self->_parse_text($el->{text}) . '"';
+                    $output .= qq/. "\n"/;
+                }
+
+                $output .= qq/;/;
+                last SWITCH;
             }
 
-            if ($el->{id}) {
-                $tail .= qq/ id='$el->{id}'/;
-            }
-
-            $output .= qq|"$offset<$el->{name}$tail$attrs$ending>"|;
-
-            if ($el->{text} && $el->{expr}) {
-                $output .= '. (do {' . $el->{text} . '} || "")';
-                $output .= qq| . "</$el->{name}>"|;
-            }
-            elsif ($el->{text}) {
-                $output .= qq/. $escape / . '"'
-                  . $self->_parse_text($el->{text}) . '";';
-                $output .= qq|\$_H .= "</$el->{name}>"|
-                  unless $el->{autoclose};
-            }
-            elsif (
-                !$next_el
-                || (   $next_el
-                    && $next_el->{level} <= $el->{level})
-              )
-            {
-                $output .= qq|. "</$el->{name}>"| unless $el->{autoclose};
-            }
-            elsif (!$el->{autoclose}) {
+            if ($el->{type} eq 'block') {
+                push @lines,  $el->{text};
                 push @$stack, $el;
+
+                if ($prev_el && $prev_el->{level} > $el->{level}) {
+                    $in_block--;
+                }
+
+                if ($next_el && $next_el->{level} > $el->{level}) {
+                    $in_block++;
+                }
+                last SWITCH;
             }
 
-            $output .= qq|. "\n"|;
-            $output .= qq|;|;
-            last SWITCH;
-        }
+            if ($el->{type} eq 'html_comment') {
+                $output = qq/"$offset"/;
 
-        if ($el->{line} && $el->{type} eq 'text') {
-            $output = qq/"$offset"/;
+                $output .= qq/ . "<!--"/;
+                $output .= qq/ . "[if $el->{if}]>"/ if $el->{if};
 
-            $el->{text} = '' unless defined $el->{text};
+                if ($el->{text}) {
+                    $output .= qq/. " $el->{text} -->\n"/;
+                }
+                else {
+                    $output .= qq/. "\n"/;
+                    push @$stack, $el;
+                }
 
-            if ($el->{expr}) {
-                $output .= qq/. $escape / . +$el->{text};
-                $output .= qq/;\$_H .= "\n"/;
-            }
-            elsif ($el->{text}) {
-                $output
-                  .= '.'
-                  . qq/$escape / . '"'
-                  . $self->_parse_text($el->{text}) . '"';
-                $output .= qq/. "\n"/;
+                $output .= qq/;/;
+                last SWITCH;
             }
 
-            $output .= qq/;/;
-            last SWITCH;
-        }
-
-        if ($el->{type} eq 'block') {
-            push @lines,  $el->{text};
-            push @$stack, $el;
-
-            if ($prev_el && $prev_el->{level} > $el->{level}) {
-                $in_block--;
-            }
-
-            if ($next_el && $next_el->{level} > $el->{level}) {
-                $in_block++;
-            }
-            last SWITCH;
-        }
-
-        if ($el->{type} eq 'html_comment') {
-            $output = qq/"$offset"/;
-
-            $output .= qq/ . "<!--"/;
-            $output .= qq/ . "[if $el->{if}]>"/ if $el->{if};
-
-            if ($el->{text}) {
-                $output .= qq/. " $el->{text} -->\n"/;
-            }
-            else {
-                $output .= qq/. "\n"/;
+            if ($el->{type} eq 'comment') {
                 push @$stack, $el;
+                last SWITCH;
             }
 
-            $output .= qq/;/;
-            last SWITCH;
-        }
+            if ($el->{type} eq 'filter') {
+                my $filter = $self->filters->{$el->{name}};
+                die "unknown filter: $el->{name}" unless $filter;
 
-        if ($el->{type} eq 'comment') {
-            push @$stack, $el;
-            last SWITCH;
-        }
+                if ($el->{name} eq 'escaped') {
+                    $output =
+                        qq/escape "/
+                      . $self->_parse_text($el->{text})
+                      . qq/\n";/;
+                }
+                else {
+                    $el->{text} = $filter->($el->{text});
 
-        if ($el->{type} eq 'filter') {
-            my $filter = $self->filters->{$el->{name}};
-            die "unknown filter: $el->{name}" unless $filter;
-
-            if ($el->{name} eq 'escaped') {
-                $output =
-                  qq/escape "/ . $self->_parse_text($el->{text}) . qq/\n";/;
+                    my $text = $self->_parse_text($el->{text});
+                    $text =~ s/\\\n/\\n/g;
+                    $output = qq/"/ . $text . qq/\n";/;
+                }
+                last SWITCH;
             }
-            else {
-                $el->{text} = $filter->($el->{text});
 
-                my $text = $self->_parse_text($el->{text});
-                $text =~ s/\\\n/\\n/g;
-                $output = qq/"/ . $text . qq/\n";/;
+            unless ($el->{text}) {
+                last SWITCH;
             }
-            last SWITCH;
-        }
 
-        unless ($el->{text}) {
-            last SWITCH;
-        }
+            die "unknown type=" . $el->{type};
 
-        die "unknown type=" . $el->{type};
-
-      } #end:SWITCH
-    } #end:ELEM
+        }    #end:SWITCH
+    }    #end:ELEM
     continue {
         push @lines, '$_H .= ' . $output if $output;
         $output = '';
         $count++;
-    } #ELEM
+    }    #ELEM
 
     my $last_empty_line = 0;
     $last_empty_line = 1
