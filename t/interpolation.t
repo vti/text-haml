@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 
-use Test::More tests => 3;
+use Test::More tests => 4;
 
 use Text::Haml;
 
@@ -15,13 +15,6 @@ EOF
 is($output, <<'EOF');
 <p>This is scrumptious cake!</p>
 EOF
-
-#$output = $haml->render(<<'EOF', quality => 'scrumptious');
-#%p= "This is #{quality} cake!"
-#EOF
-#is($output, <<'EOF');
-#<p>This is scrumptious cake!</p>
-#EOF
 
 $output = $haml->render(<<'EOF', var => 'foo');
 %p \#{$var}
@@ -43,20 +36,19 @@ is($output, <<'EOF');
   And yon presence thereof: \{$foo}
 </p>
 EOF
-#
-#Interpolation can also be used within filters. For example:
-#
-#:javascript
-#  $(document).ready(function() {
-#    alert(#{@message.to_json});
-#  });
-#
-#might compile to
-#
-#<script type='text/javascript'>
-#  //<![CDATA[
-#    $(document).ready(function() {
-#      alert("Hi there!");
-#    });
-#  //]]>
-#</script>
+
+$output = $haml->render(<<'EOF');
+:javascript
+  $(document).ready(function() {
+    alert(#{1 + 1});
+  });
+EOF
+is($output, <<'EOF');
+<script type='text/javascript'>
+  //<![CDATA[
+    $(document).ready(function() {
+alert(2);
+});
+  //]]>
+</script>
+EOF

@@ -7,7 +7,7 @@ use IO::File;
 use Scalar::Util qw/weaken/;
 use Encode qw/decode/;
 
-our $VERSION = '0.990104';
+our $VERSION = '0.990105';
 
 use constant CHUNK_SIZE => 4096;
 
@@ -874,6 +874,7 @@ sub _parse_text {
             $output .= qq/$prefix".$1."/;
         }
         else {
+            $text = $self->_parse_interpolation($text);
             $text =~ s/\\\#/\#/g;
             $output .= $expr ? $text : quotemeta($text);
             last;
@@ -881,6 +882,15 @@ sub _parse_text {
     }
 
     return $expr ? qq/"$output"/ : $output;
+}
+
+sub _parse_interpolation {
+    my $self = shift;
+    my ($text) = @_;
+
+    $text =~ s/(?<!\\)\#\{(.+?)\}/eval "$1"/msge;
+
+    return $text;
 }
 
 sub compile {
@@ -1268,7 +1278,7 @@ Norman Clarke
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright (C) 2009-2010, Viacheslav Tykhanovskyi.
+Copyright (C) 2009-2011, Viacheslav Tykhanovskyi.
 
 This program is free software, you can redistribute it and/or modify it under
 the terms of the Artistic License version 2.0.
