@@ -6,10 +6,25 @@ use warnings;
 use IO::File;
 use Scalar::Util qw/weaken/;
 use Encode qw/decode/;
+use Carp ();
+use File::Spec;
+use File::Basename ();
+use URI::Escape ();
 
 our $VERSION = '0.990105';
 
 use constant CHUNK_SIZE => 4096;
+
+BEGIN {
+    my $cache_dir = '.text_haml_cache';
+    for my $dir ($ENV{HOME}, File::Spec->tmpdir) {
+        if (defined($dir) && -d $dir && -w _) {
+            $cache_dir = File::Spec->catdir($dir, '.text_haml_cache');
+            last;
+        }
+    }
+    *_DEFAULT_CACHE_DIR = sub () { $cache_dir };
+}
 
 my $ESCAPE = {
     '\"'   => "\x22",
@@ -68,7 +83,10 @@ sub new {
     $attrs->{prepend}      = '';
     $attrs->{append}       = '';
     $attrs->{namespace}    = '';
-    $attrs->{vars}         = {};
+    $attrs->{path}         = ['.'];
+    $attrs->{cache}        = 1; # 0: not cached, 1: checks mtime, 2: always cached
+    $attrs->{cache_dir}    = _DEFAULT_CACHE_DIR;
+
     $attrs->{escape}       = <<'EOF';
     my $s = shift;
     $s =~ s/&/&amp;/g;
@@ -95,6 +113,12 @@ EOF
     my $self = {%$attrs, @_};
     bless $self, $class;
 
+    # Convert to template fullpath
+    $self->path([
+        map File::Spec->rel2abs($_),
+            ref($self->path) eq 'ARRAY' ? @{$self->path} : $self->path
+    ]);
+
     $self->{helpers_arg} ||= $self;
     weaken $self->{helpers_arg};
 
@@ -114,15 +138,25 @@ sub escape_html {
       ? $_[0]->{escape_html} = $_[1]
       : $_[0]->{escape_html};
 }
-sub code     { @_ > 1 ? $_[0]->{code}     = $_[1] : $_[0]->{code} }
-sub compiled { @_ > 1 ? $_[0]->{compiled} = $_[1] : $_[0]->{compiled} }
-sub helpers  { @_ > 1 ? $_[0]->{helpers}  = $_[1] : $_[0]->{helpers} }
-sub filters  { @_ > 1 ? $_[0]->{filters}  = $_[1] : $_[0]->{filters} }
-sub prepend  { @_ > 1 ? $_[0]->{prepend}  = $_[1] : $_[0]->{prepend} }
-sub append   { @_ > 1 ? $_[0]->{append}   = $_[1] : $_[0]->{append} }
-sub escape   { @_ > 1 ? $_[0]->{escape}   = $_[1] : $_[0]->{escape} }
-sub tape     { @_ > 1 ? $_[0]->{tape}     = $_[1] : $_[0]->{tape} }
-sub vars     { @_ > 1 ? $_[0]->{vars}     = $_[1] : $_[0]->{vars} }
+sub code     { @_ > 1 ? $_[0]->{code}       = $_[1] : $_[0]->{code} }
+sub compiled { @_ > 1 ? $_[0]->{compiled}   = $_[1] : $_[0]->{compiled} }
+sub helpers  { @_ > 1 ? $_[0]->{helpers}    = $_[1] : $_[0]->{helpers} }
+sub filters  { @_ > 1 ? $_[0]->{filters}    = $_[1] : $_[0]->{filters} }
+sub prepend  { @_ > 1 ? $_[0]->{prepend}    = $_[1] : $_[0]->{prepend} }
+sub append   { @_ > 1 ? $_[0]->{append}     = $_[1] : $_[0]->{append} }
+sub escape   { @_ > 1 ? $_[0]->{escape}     = $_[1] : $_[0]->{escape} }
+sub tape     { @_ > 1 ? $_[0]->{tape}       = $_[1] : $_[0]->{tape} }
+sub path     { @_ > 1 ? $_[0]->{path}       = $_[1] : $_[0]->{path} }
+sub cache    { @_ > 1 ? $_[0]->{cache}      = $_[1] : $_[0]->{cache} }
+sub fullpath {
+    @_ > 1 ? $_[0]->{fullpath} = $_[1] : $_[0]->{fullpath};
+}
+sub cache_dir {
+    @_ > 1 ? $_[0]->{cache_dir} = $_[1] : $_[0]->{cache_dir};
+}
+sub cache_path {
+    @_ > 1 ? $_[0]->{cache_path} = $_[1] : $_[0]->{cache_path};
+}
 
 sub helpers_arg {
     if (@_ > 1) {
@@ -516,6 +550,8 @@ EOF
 
     $code .= qq/my \$self = shift;/;
 
+    $code .= qq/my \%____vars = \@_;/;
+
     $code .= qq/no strict 'refs'; no warnings 'redefine';/;
 
     # Install helpers
@@ -533,10 +569,10 @@ EOF
         if ($self->vars_as_subs) {
             next if $self->helpers->{$var};
             $code
-              .= qq/sub $var() : lvalue; *$var = sub () : lvalue {\$self->vars->{'$var'}};/;
+                .= qq/sub $var() : lvalue; *$var = sub () : lvalue {\$____vars{'$var'}};/;
         }
         else {
-            $code .= qq/my \$$var = \$self->vars->{'$var'};/;
+            $code .= qq/my \$$var = \$____vars{'$var'};/;
         }
     }
 
@@ -831,6 +867,7 @@ EOF
     $code .= q/return $_H; };/;
 
     $self->code($code);
+
     return $self;
 }
 
@@ -914,14 +951,9 @@ sub compile {
 sub interpret {
     my $self = shift;
 
-    $self->vars({@_});
-
     my $compiled = $self->compiled;
 
-    my $output = eval { $compiled->($self) };
-
-    # Destroy variables refs to avoid memory leaks
-    $self->vars({});
+    my $output = eval { $compiled->($self, @_) };
 
     if ($@) {
         $self->error($@);
@@ -952,9 +984,24 @@ sub render_file {
     my $self = shift;
     my $path = shift;
 
+    # Set file fullpath
+    $self->_fullpath($path);
+
+    if ($self->cache >= 1) {
+        # Make cache directory
+        my $cache_dir = $self->_cache_dir;
+        # Set cache path
+        $self->_cache_path($path, $cache_dir);
+
+        # Exists same cache file ?
+        if (-e $self->cache_path && $self->_eq_mtime) {
+            return $self->_interpret_cached(@_);
+        }
+    }
+
     # Open file
     my $file = IO::File->new;
-    $file->open("< $path") or die "Can't open template '$path': $!";
+    $file->open($self->fullpath, 'r') or die "Can't open template '$path': $!";
     binmode $file, ':utf8';
 
     # Slurp file
@@ -962,12 +1009,92 @@ sub render_file {
     while ($file->sysread(my $buffer, CHUNK_SIZE, 0)) {
         $tmpl .= $buffer;
     }
+    $file->close;
 
     # Encoding
     $tmpl = decode($self->encoding, $tmpl) if $self->encoding;
 
     # Render
-    return $self->render($tmpl, @_);
+    my $output;
+    if ($output = $self->render($tmpl, @_)) {
+        if ($self->cache >= 1) {
+            # Create cache
+            if ($file->open($self->cache_path, 'w')) {
+                binmode $file, ':utf8';
+                my $mtime = (stat($self->fullpath))[9];
+                print $file '#'.$mtime."\n".$self->code; # Write with file mtime
+                $file->close;
+            }
+        }
+    }
+
+    return $output;
+}
+
+sub _fullpath {
+    my $self = shift;
+    my $path = shift;
+
+    for my $p (@{$self->path}) {
+        my $fullpath = File::Spec->catfile($p, $path);
+        if (-r $fullpath) { # is readable ?
+            $self->fullpath($fullpath);
+            return;
+        }
+    }
+
+    Carp::croak("Can't find template '$path'");
+}
+
+sub _cache_dir {
+    my $self = shift;
+
+    my $cache_dir = File::Spec->catdir(
+        $self->cache_dir,
+        URI::Escape::uri_escape(
+            File::Basename::dirname($self->fullpath)
+        ),
+    );
+    if (not -e $cache_dir) {
+        require File::Path;
+        eval { File::Path::mkpath($cache_dir) };
+        Carp::carp("Can't mkpath '$cache_dir': $@") if $@;
+    }
+
+    return $cache_dir;
+}
+
+sub _cache_path {
+    my $self = shift;
+    my $path = shift;
+    my $cache_dir = shift;
+
+    $self->cache_path(File::Spec->catfile(
+        $cache_dir,
+        File::Basename::basename($path).'.pl',
+    ));
+}
+
+sub _eq_mtime {
+    my $self = shift;
+
+    return 1 if $self->cache == 2;
+    return 0 if $self->cache == 0;
+
+    my $file = IO::File->new;
+    $file->open($self->cache_path, 'r') or return;
+    $file->sysread(my $cache_mtime, length('#xxxxxxxxxx'));
+    $file->close;
+    my $orig_mtime = '#'.(stat($self->fullpath))[9];
+    return $cache_mtime eq $orig_mtime;
+}
+
+sub _interpret_cached {
+    my $self = shift;
+
+    my $compiled = require $self->cache_path;
+    $self->compiled($compiled);
+    return $self->interpret(@_);
 }
 
 sub _doctype {
@@ -1052,6 +1179,9 @@ Text::Haml - Haml Perl implementation
     my $html = $haml->render('%p foo'); # <p>foo</p>
 
     $html = $haml->render('= user', user => 'friend'); # <div>friend</div>
+
+    # Use Haml file
+    $html = $haml->render_file('tmpl/index.haml', user => 'friend');
 
 =head1 DESCRIPTION
 
@@ -1182,6 +1312,24 @@ Holds the last error.
 
 Holds parsed haml elements.
 
+=head2 C<path>
+
+Holds path of Haml templates. Current directory is a default.
+If you want to set several paths, arrayref can also be set up.
+This way is the same as L<Text::Xslate>.
+
+=head2 C<cache>
+
+Holds cache level of Haml templates. 1 is a default.
+0 means "Not cached", 1 means "Checked template mtime" and 2 means "Used always cached".
+This way is the same as L<Text::Xslate>.
+
+=head2 C<cache_dir>
+
+Holds cache directory of Haml templates. $ENV{HOME}/.text_haml_cache is a default.
+Unless $ENV{HOME}, File::Spec->tempdir was used.
+This way is the same as L<Text::Xslate>.
+
 =head1 METHODS
 
 =head2 C<new>
@@ -1234,9 +1382,10 @@ Renders Haml string. Returns undef on error. See error attribute.
 
 =head2 C<render_file>
 
-    my $text = $haml->render_file('foo.haml');
+    my $text = $haml->render_file('foo.haml', var => 'hello');
 
 A helper method that loads a file and passes it to the render method.
+Since "%____vars" is used internally, you cannot use this as parameter name.
 
 =head1 PERL SPECIFIC IMPLEMENTATION ISSUES
 
