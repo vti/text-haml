@@ -35,9 +35,13 @@ WriteMakefile(
     ),
 
     PREREQ_PM => {
-        'IO::File'     => '0',
-        'Scalar::Util' => '0',
-        'Encode'       => '0',
+        'IO::File'       => '0',
+        'Scalar::Util'   => '0',
+        'Encode'         => '0',
+        'Carp'           => '0',
+        'File::Spec'     => '0',
+        'File::Basename' => '0',
+        'URI::Escape'    => '0',
     },
     test => {TESTS => 't/*.t t/*/*.t t/*/*/*.t t/*/*/*/*.t'}
 );
