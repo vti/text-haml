@@ -889,11 +889,11 @@ sub _parse_text {
         my $t;
         my $escape = 0;
         my $found  = 0;
-        if ($text =~ s/^(.*?)?(?<!\\)\#{//) {
+        if ($text =~ s/^(.*?)?(?<!\\)\#\{//) {
             $found = 1;
             $t     = $1;
         }
-        elsif ($text =~ s/^(.*?)?\\\\\#{//) {
+        elsif ($text =~ s/^(.*?)?\\\\\#\{//) {
             $found  = 1;
             $t      = $1;
             $escape = 1;
@@ -905,7 +905,7 @@ sub _parse_text {
         }
 
         if ($found) {
-            $text =~ s/^([^}]+)}//;
+            $text =~ s/^([^}]+)\}//;
 
             my $prefix = $escape ? quotemeta("\\") : '';
             $output .= qq/$prefix".$1."/;
