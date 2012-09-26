@@ -11,7 +11,7 @@ use File::Spec;
 use File::Basename ();
 use URI::Escape ();
 
-our $VERSION = '0.990106';
+our $VERSION = '0.990107';
 
 use constant CHUNK_SIZE => 4096;
 
@@ -346,6 +346,7 @@ sub parse {
           )
         {
             $el->{type} = 'tag';
+            $el->{name} = '';
 
             if ($line =~ s/^$tag_start$tag_name//) {
                 $el->{name} = $1;
