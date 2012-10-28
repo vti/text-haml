@@ -15,7 +15,7 @@ my $output = $haml->render(<<'EOF');
     pretty long so I should   |
     probably make it          |
     multiline so it does not  |
-    look awful.
+    look awful.               |
   %p This is short.
 EOF
 is($output, <<'EOF');
@@ -32,7 +32,7 @@ $output = $haml->render(<<'EOF');
     pretty long so I should   |
     probably make it          |
     multiline so it does not  |
-    look awful.
+    look awful.               |
   %p This is short.
 EOF
 is($output, <<'EOF');
