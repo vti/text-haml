@@ -290,7 +290,7 @@ is_deeply(
 $haml->parse(<<'EOF');
 multiline |
 comment   |
-parsing
+parsing   |
 normal
 EOF
 is_deeply(
@@ -298,7 +298,7 @@ is_deeply(
     [   {   type  => 'text',
             level => 0,
             text  => 'multiline comment parsing',
-            line  => "multiline |\ncomment   |\nparsing"
+            line  => "multiline |\ncomment   |\nparsing   |"
         },
         {   type  => 'text',
             level => 0,
@@ -315,7 +315,7 @@ is_deeply(
 $haml->parse(<<'EOF');
 %p multiline |
    comment   |
-   parsing
+   parsing   |
 normal
 EOF
 is_deeply(
@@ -324,7 +324,7 @@ is_deeply(
             level => 0,
             name  => 'p',
             text  => 'multiline comment parsing',
-            line  => "%p multiline |\ncomment   |\nparsing"
+            line  => "%p multiline |\ncomment   |\nparsing   |"
         },
         {   type  => 'text',
             level => 0,
