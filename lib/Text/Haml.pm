@@ -498,7 +498,7 @@ sub parse {
             # For the first time
             if (!$tape->[-1] || ref $tape->[-1]->{text} ne 'ARRAY') {
                 $el->{text} = [$line];
-                $el->{line} = $el->{line} . "\n" || $line . "$1|\n";
+                $el->{line} ||= $line . "$1|"; # XXX: is this really necessary?
 
                 push @$tape, $el;
             }
@@ -507,22 +507,26 @@ sub parse {
             else {
                 my $prev_stack_el = $tape->[-1];
                 push @{$prev_stack_el->{text}}, $line;
-                $prev_stack_el->{line} .= $line . "$1|\n";
+                $prev_stack_el->{line} .= "\n" . $line . "$1|";
             }
-        }
-
-        # For the last time
-        elsif ($tape->[-1] && ref $tape->[-1]->{text} eq 'ARRAY') {
-            $tape->[-1]->{text} = join(" ", @{$tape->[-1]->{text}}, $line);
-            $tape->[-1]->{line} .= $line;
         }
 
         # Normal text
         else {
+            # Terminate multiline tokens before current token
+            if ($tape->[-1] && ref $tape->[-1]->{text} eq 'ARRAY') {
+                $tape->[-1]->{text} = join(" ", @{$tape->[-1]->{text}});
+            }
+
             $el->{text} = $line if $line;
 
             push @$tape, $el;
         }
+    }
+
+    # Terminate multiline tokens on the end of file
+    if ($tape->[-1] && ref $tape->[-1]->{text} eq 'ARRAY') {
+        $tape->[-1]->{text} = join(" ", @{$tape->[-1]->{text}});
     }
 }
 
