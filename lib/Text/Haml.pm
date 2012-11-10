@@ -248,6 +248,7 @@ sub parse {
     my $tape = $self->tape;
 
     my $level;
+    my @multiline_el_queue;
     my @lines = split /\n/, $tmpl;
     push @lines, '' if $tmpl =~ m/\n$/;
     @lines = ('') if $tmpl eq "\n";
@@ -501,6 +502,7 @@ sub parse {
                 $el->{line} ||= $line . "$1|"; # XXX: is this really necessary?
 
                 push @$tape, $el;
+                push @multiline_el_queue, $el;
             }
 
             # Continue concatenation
@@ -513,20 +515,15 @@ sub parse {
 
         # Normal text
         else {
-            # Terminate multiline tokens before current token
-            if ($tape->[-1] && ref $tape->[-1]->{text} eq 'ARRAY') {
-                $tape->[-1]->{text} = join(" ", @{$tape->[-1]->{text}});
-            }
-
             $el->{text} = $line if $line;
 
             push @$tape, $el;
         }
     }
 
-    # Terminate multiline tokens on the end of file
-    if ($tape->[-1] && ref $tape->[-1]->{text} eq 'ARRAY') {
-        $tape->[-1]->{text} = join(" ", @{$tape->[-1]->{text}});
+    # Finalize multilines
+    for my $el (@multiline_el_queue) {
+        $el->{text} = join(" ", @{$el->{text}});
     }
 }
 
