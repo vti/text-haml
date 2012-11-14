@@ -1180,7 +1180,7 @@ Text::Haml - Haml Perl implementation
 
     my $html = $haml->render('%p foo'); # <p>foo</p>
 
-    $html = $haml->render('= user', user => 'friend'); # <div>friend</div>
+    $html = $haml->render('= $user', user => 'friend'); # <div>friend</div>
 
     # Use Haml file
     $html = $haml->render_file('tmpl/index.haml', user => 'friend');
