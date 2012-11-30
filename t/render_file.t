@@ -5,7 +5,7 @@ use warnings;
 
 use Text::Haml;
 
-use Test::More tests => 8;
+use Test::More tests => 9;
 
 use IO::File;
 use URI::Escape ();
@@ -35,6 +35,9 @@ my $output = $haml->render_file('render.haml', title => 'RENDER_FILE_TEST');
 $file->open(File::Spec->catfile('t', 'render1.html'), 'r') or die $!;
 my $expected1 = do { local $/; <$file> };
 $file->close;
+is($output, $expected1);
+
+$output = $haml->render_file( File::Spec->rel2abs(File::Spec->catfile('t', 'render1.haml')), title => 'RENDER_FILE_TEST');
 is($output, $expected1);
 
 my $uri_escaped = URI::Escape::uri_escape($tempdir);

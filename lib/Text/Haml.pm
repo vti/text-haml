@@ -1037,6 +1037,11 @@ sub _fullpath {
     my $self = shift;
     my $path = shift;
 
+    if (File::Spec->file_name_is_absolute($path) and -r $path) {
+        $self->fullpath($path);
+        return;
+    }
+
     for my $p (@{$self->path}) {
         my $fullpath = File::Spec->catfile($p, $path);
         if (-r $fullpath) { # is readable ?
