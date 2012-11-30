@@ -5,7 +5,7 @@ use warnings;
 
 use Text::Haml;
 
-use Test::More tests => 6;
+use Test::More tests => 8;
 
 use IO::File;
 use URI::Escape ();
@@ -67,6 +67,10 @@ $haml = Text::Haml->new(
 $output = $haml->render_file('render.haml', title => 'RENDER_FILE_TEST');
 # same output test 1
 is($output, $expected1);
+# rendering same file again works just the same
+$output = $haml->render_file('render.haml', title => 'RENDER_FILE_TEST');
+is($output, $expected1);
+is($haml->error,undef);
 
 $haml = Text::Haml->new(
 	path => $tempdir,

@@ -1094,7 +1094,7 @@ sub _eq_mtime {
 sub _interpret_cached {
     my $self = shift;
 
-    my $compiled = require $self->cache_path;
+    my $compiled = do $self->cache_path;
     $self->compiled($compiled);
     return $self->interpret(@_);
 }
