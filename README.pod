@@ -1,0 +1,271 @@
+=pod
+
+=head1 NAME
+
+Text::Haml - Haml Perl implementation
+
+=head1 SYNOPSIS
+
+    use Text::Haml;
+
+    my $haml = Text::Haml->new;
+
+    my $html = $haml->render('%p foo'); # <p>foo</p>
+
+    $html = $haml->render('= $user', user => 'friend'); # <div>friend</div>
+
+    # Use Haml file
+    $html = $haml->render_file('tmpl/index.haml', user => 'friend');
+
+=head1 DESCRIPTION
+
+L<Text::Haml> implements Haml
+L<http://haml-lang.com/docs/yardoc/file.HAML_REFERENCE.html> specification.
+
+L<Text::Haml> passes specification tests written by Norman Clarke
+http://github.com/norman/haml-spec and supports only cross-language Haml
+features. Do not expect Ruby specific things to work.
+
+=head1 ATTRIBUTES
+
+L<Text::Haml> implements the following attributes:
+
+=head2 C<append>
+
+Holds the string of code that is appended to the generated Perl code.
+
+=head2 C<code>
+
+Holds the Perl code.
+
+=head2 C<compiled>
+
+Holds compiled code.
+
+=head2 C<encoding>
+
+    $haml->encoding('utf-8');
+
+Default is utf-8.
+
+=head2 C<escape>
+
+Escape subroutine presented as string.
+
+Default is
+
+    $haml->escape(<<'EOF');
+        my $s = shift;
+        $s =~ s/&/&amp;/g;
+        $s =~ s/</&lt;/g;
+        $s =~ s/>/&gt;/g;
+        $s =~ s/"/&quot;/g;
+        $s =~ s/'/&apos;/g;
+        return $s;
+    EOF
+
+=head2 C<escape_html>
+
+    $haml->escape_html(0);
+
+Switch on/off Haml output html escaping. Default is on.
+
+=head2 C<filters>
+
+Holds filters.
+
+=head2 C<format>
+
+    $haml->format('xhtml');
+
+Supported formats: xhtml, html, html5.
+
+Default is xhtml.
+
+=head2 C<namespace>
+
+Holds the namespace under which the Perl package is generated.
+
+=head2 C<prepend>
+
+Holds the string of code that is prepended to the generated Perl code.
+
+=head2 C<vars>
+
+Holds the variables that are passed during the rendering.
+
+=head2 C<vars_as_subs>
+
+When options is B<NOT SET> (by default) passed variables are normal Perl
+variables and are used with C<$> prefix.
+
+    $haml->render('%p $var', var => 'hello');
+
+When this option is B<SET> passed variables are Perl lvalue
+subroutines and are used without C<$> prefix.
+
+    $haml->render('%p var', var => 'hello');
+
+But if you declare Perl variable in a block, it must be used with C<$>
+prefix.
+
+    $haml->render('<<EOF')
+        - my $foo;
+        %p= $foo
+    EOF
+
+=head2 C<helpers>
+
+    helpers => {
+        foo => sub {
+            my $self   = shift;
+            my $string = shift;
+
+            $string =~ s/r/z/;
+
+            return $string;
+        }
+    }
+
+Holds helpers subroutines. Helpers can be called in Haml text as normal Perl
+functions. See also add_helper.
+
+=head2 C<helpers_arg>
+
+    $haml->helpers_args($my_context);
+
+First argument passed to the helper (L<Text::Haml> instance by default).
+
+=head2 C<error>
+
+    $haml->error;
+
+Holds the last error.
+
+=head2 C<tape>
+
+Holds parsed haml elements.
+
+=head2 C<path>
+
+Holds path of Haml templates. Current directory is a default.
+If you want to set several paths, arrayref can also be set up.
+This way is the same as L<Text::Xslate>.
+
+=head2 C<cache>
+
+Holds cache level of Haml templates. 1 is a default.
+0 means "Not cached", 1 means "Checked template mtime" and 2 means "Used always cached".
+This way is the same as L<Text::Xslate>.
+
+=head2 C<cache_dir>
+
+Holds cache directory of Haml templates. $ENV{HOME}/.text_haml_cache is a default.
+Unless $ENV{HOME}, File::Spec->tempdir was used.
+This way is the same as L<Text::Xslate>.
+
+=head1 METHODS
+
+=head2 C<new>
+
+    my $haml = Text::Haml->new;
+
+=head2 C<add_helper>
+
+    $haml->add_helper(current_time => sub { time });
+
+Adds a new helper.
+
+=head2 C<add_filter>
+
+    $haml->add_filter(compress => sub { $_[0] =~ s/\s+/ /g; $_[0]});
+
+Adds a new filter.
+
+=head2 C<build>
+
+    $haml->build(@_);
+
+Builds the Perl code.
+
+=head2 C<compile>
+
+    $haml->compile;
+
+Compiles parsed code.
+
+=head2 C<interpret>
+
+    $haml->interpret(@_);
+
+Interprets compiled code.
+
+=head2 C<parse>
+
+    $haml->parse('%p foo');
+
+Parses Haml string building a tree.
+
+=head2 C<render>
+
+    my $text = $haml->render('%p foo');
+
+    my $text = $haml->render('%p var', var => 'hello');
+
+Renders Haml string. Returns undef on error. See error attribute.
+
+=head2 C<render_file>
+
+    my $text = $haml->render_file('foo.haml', var => 'hello');
+
+A helper method that loads a file and passes it to the render method.
+Since "%____vars" is used internally, you cannot use this as parameter name.
+
+=head1 PERL SPECIFIC IMPLEMENTATION ISSUES
+
+=head2 String interpolation
+
+Despite of existing string interpolation in Perl, Ruby interpolation is also
+supported.
+
+$haml->render('%p Hello #{user}', user => 'foo')
+
+=head2 Hash keys
+
+When declaring tag attributes C<:> symbol can be used.
+
+$haml->render("%a{:href => 'bar'}");
+
+Perl-style is supported but not recommented, since your Haml template won't
+work with Ruby Haml implementation parser.
+
+$haml->render("%a{href => 'bar'}");
+
+=head1 DEVELOPMENT
+
+=head2 Repository
+
+    http://github.com/vti/text-haml
+
+=head1 AUTHOR
+
+Viacheslav Tykhanovskyi, C<vti@cpan.org>.
+
+=head1 CREDITS
+
+In alphabetical order:
+
+Nick Ragouzis
+
+Norman Clarke
+
+Wanradt Koell
+
+=head1 COPYRIGHT AND LICENSE
+
+Copyright (C) 2009-2012, Viacheslav Tykhanovskyi.
+
+This program is free software, you can redistribute it and/or modify it under
+the terms of the Artistic License version 2.0.
+
+=cut

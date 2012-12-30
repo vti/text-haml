@@ -11,7 +11,7 @@ use File::Spec;
 use File::Basename ();
 use URI::Escape ();
 
-our $VERSION = '0.990107';
+our $VERSION = '0.990108';
 
 use constant CHUNK_SIZE => 4096;
 
@@ -1426,9 +1426,11 @@ Nick Ragouzis
 
 Norman Clarke
 
+Wanradt Koell
+
 =head1 COPYRIGHT AND LICENSE
 
-Copyright (C) 2009-2011, Viacheslav Tykhanovskyi.
+Copyright (C) 2009-2012, Viacheslav Tykhanovskyi.
 
 This program is free software, you can redistribute it and/or modify it under
 the terms of the Artistic License version 2.0.
