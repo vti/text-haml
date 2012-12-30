@@ -1004,7 +1004,6 @@ sub render_file {
     # Open file
     my $file = IO::File->new;
     $file->open($self->fullpath, 'r') or die "Can't open template '$path': $!";
-    binmode $file, ':utf8';
 
     # Slurp file
     my $tmpl = '';
