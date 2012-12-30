@@ -1420,13 +1420,21 @@ Viacheslav Tykhanovskyi, C<vti@cpan.org>.
 
 =head1 CREDITS
 
-In alphabetical order:
+In order of appearance:
 
 Nick Ragouzis
 
 Norman Clarke
 
-Wanradt Koell
+rightgo09
+
+Breno G. de Oliveira (garu)
+
+Yuya Tanaka
+
+Wanradt Koell (wanradt)
+
+Keedi Kim
 
 =head1 COPYRIGHT AND LICENSE
 
