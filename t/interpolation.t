@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 
-use Test::More tests => 4;
+use Test::More tests => 5;
 
 use Text::Haml;
 
@@ -51,4 +51,14 @@ alert(2);
 });
   //]]>
 </script>
+EOF
+
+$output = $haml->render(<<'EOF');
+- my $prefix = 'test';
+%input.span2{ :type => 'text', :idx => '#{$prefix}-username', :name => '#{$prefix}-username' }
+%input.span2{ :type => 'text', :id => '#{$prefix}-username', :name => '#{$prefix}-username' }
+EOF
+is($output, <<'EOF');
+<input class='span2' type='text' idx='test-username' name='test-username' />
+<input class='span2' id='test-username' type='text' name='test-username' />
 EOF

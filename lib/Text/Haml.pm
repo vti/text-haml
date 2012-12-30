@@ -674,7 +674,7 @@ EOF
                         elsif ($name eq 'id') {
                             $el->{id} ||= '';
                             $el->{id} = $el->{id} . '_' if $el->{id};
-                            $el->{id} .= $value->{text};
+                            $el->{id} .= $self->_parse_text($value->{text});
                             next ATTR;
                         }
 
