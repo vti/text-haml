@@ -262,7 +262,7 @@ sub parse {
             $level = 0;
         }
 
-        my $el = {level => $level, type => 'text', line => $line};
+        my $el = {level => $level, type => 'text', line => $line, lineno => $i+1};
 
         # Haml comment
         if ($line =~ m/^$comment_token(?: (.*))?/) {
@@ -281,6 +281,7 @@ sub parse {
                 $prev->{text} .= "\n" if $prev->{text};
                 $prev->{text} .= $line;
                 $prev->{line} .= "\n" . (' ' x $el->{level}) . $el->{line};
+                _update_lineno($prev, $i);
                 next;
             }
         }
@@ -402,6 +403,7 @@ sub parse {
                     if (!$line) {
                         $line = $lines[++$i] || last;
                         $el->{line} .= "\n$line";
+                        _update_lineno($el, $i);
                     }
                     elsif ($type eq 'perl' && $line =~ s/^$attributes_end//) {
                         last;
@@ -510,6 +512,7 @@ sub parse {
                 my $prev_stack_el = $tape->[-1];
                 push @{$prev_stack_el->{text}}, $line;
                 $prev_stack_el->{line} .= "\n" . $line . "$1|";
+                _update_lineno($prev_stack_el, $i);
             }
         }
 
@@ -525,6 +528,15 @@ sub parse {
     for my $el (@multiline_el_queue) {
         $el->{text} = join(" ", @{$el->{text}});
     }
+}
+
+# Updates lineno entry on the tape element
+# for itens spanning more than one line
+sub _update_lineno {
+    my ($el, $lineno) = @_;
+    $lineno++;    # report line numbers starting at 1 instead of 0
+    $el->{lineno} =~ s/^(\d+)(?:-\d+)?/$1-$lineno/;
+    return;
 }
 
 sub build {
