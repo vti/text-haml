@@ -3,13 +3,15 @@
 use strict;
 use warnings;
 
-use Test::More tests => 5;
+use Test::More tests => 6;
 
 use Text::Haml;
 
 my $haml = Text::Haml->new;
 
-my $output = $haml->render(<<'EOF', quality => 'scrumptious');
+my $output;
+
+$output = $haml->render(<<'EOF', quality => 'scrumptious');
 %p This is #{$quality} cake!
 EOF
 is($output, <<'EOF');
@@ -48,6 +50,22 @@ is($output, <<'EOF');
   //<![CDATA[
     $(document).ready(function() {
 alert(2);
+});
+  //]]>
+</script>
+EOF
+
+$output = $haml->render(<<'EOF', foo => 'bar');
+:javascript
+  $(document).ready(function() {
+    alert('#{$foo}');
+  });
+EOF
+is($output, <<'EOF');
+<script type='text/javascript'>
+  //<![CDATA[
+    $(document).ready(function() {
+alert('bar');
 });
   //]]>
 </script>

@@ -737,8 +737,8 @@ EOF
                     $output .= qq| . "</$el->{name}>"|;
                 }
                 elsif ($el->{text}) {
-                    $output .= qq/. $escape / . '"'
-                      . $self->_parse_text($el->{text}) . '";';
+                    $output .= qq/. $escape(/ . '"'
+                      . $self->_parse_text($el->{text}) . '");';
                     $output .= qq|\$_H .= "</$el->{name}>"|
                       unless $el->{autoclose};
                 }
@@ -926,8 +926,7 @@ sub _parse_text {
         }
         else {
             $text = $self->_parse_interpolation($text);
-            $text =~ s/\\\#/\#/g;
-            $output .= $expr ? $text : quotemeta($text);
+            $output .= $text;
             last;
         }
     }
@@ -939,9 +938,29 @@ sub _parse_interpolation {
     my $self = shift;
     my ($text) = @_;
 
-    $text =~ s/(?<!\\)\#\{(.+?)\}/eval "$1"/msge;
+    my @parts;
 
-    return $text;
+    my $start_tag = qr{(?<!\\)\#\{};
+    my $end_tag   = qr{\}};
+
+    pos $text = 0;
+    while (pos $text < length $text) {
+        if ($text =~ m/\G $start_tag (.*?) $end_tag/xgcms) {
+            push @parts, 'do {' . $1 . '}';
+        }
+        elsif ($text =~ m/\G (.*?) (?=$start_tag)/xgcms) {
+            push @parts, 'qq{' . quotemeta($1) . '}';
+        }
+        else {
+            my $leftover = substr($text, pos($text));
+            push @parts, 'qq{' . quotemeta($leftover) . '}';
+            last;
+        }
+    }
+
+    return '' unless @parts;
+
+    return '" . ' . join('.', map {s/\\\\#\\{/#\\{/; $_} @parts) . '."';
 }
 
 sub compile {
