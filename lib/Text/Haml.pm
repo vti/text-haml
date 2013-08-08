@@ -342,7 +342,7 @@ sub parse {
         if ($line =~ m/^(?:$tag_start
             |$class_start
             |$id_start
-            |$attributes_start
+            |$attributes_start[^$attributes_start]
             |$attributes_start2
             )/x
           )

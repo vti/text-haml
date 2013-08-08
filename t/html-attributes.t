@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 
-use Test::More tests => 7;
+use Test::More tests => 9;
 
 use Text::Haml;
 
@@ -43,6 +43,24 @@ is($output, <<'EOF');
 <html xmlns='http://www.w3.org/1999/xhtml' xml:lang='en' lang='en'>
   <div class='bar hello'></div>
 </html>
+EOF
+
+# Do not confuse double braces for attributes
+$output = $haml->render(<<'EOF');
+{{ foo }}
+EOF
+is($output, <<'EOF');
+{{ foo }}
+EOF
+
+$output = $haml->render(<<'EOF');
+%div{:class => 'foo'}
+  {{ bar }}
+EOF
+is($output, <<'EOF');
+<div class='foo'>
+  {{ bar }}
+</div>
 EOF
 #
 ## Attribute Methods
