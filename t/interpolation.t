@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 
-use Test::More tests => 6;
+use Test::More tests => 8;
 
 use Text::Haml;
 
@@ -79,4 +79,29 @@ EOF
 is($output, <<'EOF');
 <input class='span2' type='text' idx='test-username' name='test-username' />
 <input class='span2' id='test-username' type='text' name='test-username' />
+EOF
+
+# Arrayref interpolation
+$output = $haml->render(<<'EOF');
+- my $names = [qw( Alice Bob )];
+%p The first person is #{$names->[0]}. The second person is #{$names->[1]}.
+%p The second person is #{$names->[1]}. The first person is #{$names->[0]}.
+EOF
+is($output, <<'EOF');
+<p>The first person is Alice. The second person is Bob.</p>
+<p>The second person is Bob. The first person is Alice.</p>
+EOF
+
+# Hashref interpolation
+$output = $haml->render(<<'EOF');
+- my $people = {
+-    Alice => { role => 'sender'    },
+-    Bob   => { role => 'recipient' },
+- };
+%p Alice has the role of #{$people->{Alice}->{role}}. Bob has the role of #{$people->{Bob}->{role}}.
+%p Bob has the role of #{$people->{Bob}->{role}}. Alice has the role of #{$people->{Alice}->{role}}.
+EOF
+is($output, <<'EOF');
+<p>Alice has the role of sender. Bob has the role of recipient.</p>
+<p>Bob has the role of recipient. Alice has the role of sender.</p>
 EOF
