@@ -903,14 +903,21 @@ sub _parse_text {
         my $t;
         my $escape = 0;
         my $found  = 0;
-        if ($text =~ s/^(.*?)?(?<!\\)\#\{//) {
-            $found = 1;
-            $t     = $1;
+        my $variable;
+
+        our $curly_brace_n;
+        $curly_brace_n = qr/ (?> [^{}]+ | \{ (??{ $curly_brace_n }) \} )* /x;
+
+        if ($text =~ s/^(.*?)?(?<!\\)(\#\{$curly_brace_n\})//) {
+            $found    = 1;
+            $t        = $1;
+            $variable = $2;
         }
-        elsif ($text =~ s/^(.*?)?\\\\\#\{//) {
-            $found  = 1;
-            $t      = $1;
-            $escape = 1;
+        elsif ($text =~ s/^(.*?)?\\\\(\#\{$curly_brace_n\})//) {
+            $found    = 1;
+            $t        = $1;
+            $variable = $2;
+            $escape   = 1;
         }
 
         if ($t) {
@@ -919,10 +926,10 @@ sub _parse_text {
         }
 
         if ($found) {
-            $text =~ s/^([^}]+)\}//;
+            $variable =~ s/\#\{(.*)\}/$1/;
 
             my $prefix = $escape ? quotemeta("\\") : '';
-            $output .= qq/$prefix".$1."/;
+            $output .= qq/$prefix".$variable."/;
         }
         else {
             $text = $self->_parse_interpolation($text);
