@@ -212,7 +212,8 @@ sub parse {
     my $attribute_arrow  = quotemeta '=>';
     my $attributes_sep   = quotemeta ',';
     my $attribute_prefix = quotemeta ':';
-    my $attribute_name   = qr/(?:$STRING_RE|.*?(?= |$attribute_arrow))/;
+    my $attribute_postfix = quotemeta ':';
+    my $attribute_name   = qr/(?:$STRING_RE|.*?(?= |$attribute_arrow|$attribute_postfix))/;
     my $attribute_value =
       qr/(?:$STRING_RE|[^ $attributes_sep$attributes_end]+)/x;
 
@@ -378,7 +379,7 @@ sub parse {
                     $attributes_start\s*
                     $attribute_prefix?
                     $attribute_name\s*
-                    $attribute_arrow\s*
+                    (?:$attribute_arrow|$attribute_postfix)\s*
                     $attribute_value
                     |
                     $attributes_start2\s*
@@ -417,7 +418,7 @@ sub parse {
 
                         if ($line =~ s/^\s*$attribute_prefix?
                                     ($attribute_name)\s*
-                                    $attribute_arrow\s*
+                                    (?:$attribute_arrow|$attribute_postfix)\s*
                                     ($attribute_value)\s*
                                     (?:$attributes_sep\s*)?//x
                           )
