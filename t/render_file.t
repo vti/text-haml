@@ -5,12 +5,13 @@ use warnings;
 
 use Text::Haml;
 
-use Test::More tests => 9;
+use Test::More tests => 10;
 
 use IO::File;
 use URI::Escape ();
 use File::Spec;
 use File::Temp qw/ tempdir /;
+use Data::Section::Simple;
 
 my $file = IO::File->new;
 # cache_dir
@@ -88,3 +89,25 @@ is($output, <<'EOF');
 </p>
 EOF
 
+# Test virtual path
+my $vpath = Data::Section::Simple->new()->get_data_section();
+
+$haml = Text::Haml->new(
+	path => [$vpath],
+	cache_dir => $tempdir,
+	cache => 1,
+);
+
+$output = $haml->render_file('index.haml', title => 'RENDER_DATA_SECTION_TEST');
+is($output, <<'EOF');
+<p class='title'>RENDER_DATA_SECTION_TEST</p>
+<p>TEST</p>
+EOF
+
+__DATA__
+@@ index.haml
+%p(class = 'title') #{$title}
+%p TEST
+
+@@ header.haml
+%header hello
