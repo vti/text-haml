@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 
-use Test::More tests => 9;
+use Test::More tests => 10;
 
 use Text::Haml;
 
@@ -12,6 +12,13 @@ my $haml = Text::Haml->new;
 # Attributes: {} or ()
 
 my $output = $haml->render(<<'EOF');
+%input{name: 'username', class: 'input-sm'}
+EOF
+is($output, <<'EOF');
+<input class='input-sm' name='username' />
+EOF
+
+$output = $haml->render(<<'EOF');
 %html{xmlns => "http://www.w3.org/1999/xhtml", "xml:lang" => "en", lang => "en"}
 EOF
 is($output, <<'EOF');
