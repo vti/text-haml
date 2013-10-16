@@ -115,7 +115,7 @@ EOF
 
     # Convert to template fullpath
     $self->path([
-        map File::Spec->rel2abs($_),
+        map { ref($_) ? $_ : File::Spec->rel2abs($_) }
             ref($self->path) eq 'ARRAY' ? @{$self->path} : $self->path
     ]);
 
@@ -126,37 +126,25 @@ EOF
 }
 
 # Yes, i know!
-sub vars_as_subs {
-    @_ > 1 ? $_[0]->{vars_as_subs} = $_[1] : $_[0]->{vars_as_subs};
-}
-
-sub format   { @_ > 1 ? $_[0]->{format}   = $_[1] : $_[0]->{format} }
-sub encoding { @_ > 1 ? $_[0]->{encoding} = $_[1] : $_[0]->{encoding} }
-
-sub escape_html {
-    @_ > 1
-      ? $_[0]->{escape_html} = $_[1]
-      : $_[0]->{escape_html};
-}
-sub code     { @_ > 1 ? $_[0]->{code}       = $_[1] : $_[0]->{code} }
-sub compiled { @_ > 1 ? $_[0]->{compiled}   = $_[1] : $_[0]->{compiled} }
-sub helpers  { @_ > 1 ? $_[0]->{helpers}    = $_[1] : $_[0]->{helpers} }
-sub filters  { @_ > 1 ? $_[0]->{filters}    = $_[1] : $_[0]->{filters} }
-sub prepend  { @_ > 1 ? $_[0]->{prepend}    = $_[1] : $_[0]->{prepend} }
-sub append   { @_ > 1 ? $_[0]->{append}     = $_[1] : $_[0]->{append} }
-sub escape   { @_ > 1 ? $_[0]->{escape}     = $_[1] : $_[0]->{escape} }
-sub tape     { @_ > 1 ? $_[0]->{tape}       = $_[1] : $_[0]->{tape} }
-sub path     { @_ > 1 ? $_[0]->{path}       = $_[1] : $_[0]->{path} }
-sub cache    { @_ > 1 ? $_[0]->{cache}      = $_[1] : $_[0]->{cache} }
-sub fullpath {
-    @_ > 1 ? $_[0]->{fullpath} = $_[1] : $_[0]->{fullpath};
-}
-sub cache_dir {
-    @_ > 1 ? $_[0]->{cache_dir} = $_[1] : $_[0]->{cache_dir};
-}
-sub cache_path {
-    @_ > 1 ? $_[0]->{cache_path} = $_[1] : $_[0]->{cache_path};
-}
+sub vars_as_subs  { @_ > 1 ? $_[0]->{vars_as_subs}  = $_[1] : $_[0]->{vars_as_subs}; }
+sub format        { @_ > 1 ? $_[0]->{format}        = $_[1] : $_[0]->{format} }
+sub encoding      { @_ > 1 ? $_[0]->{encoding}      = $_[1] : $_[0]->{encoding} }
+sub escape_html   { @_ > 1 ? $_[0]->{escape_html}   = $_[1] : $_[0]->{escape_html}; }
+sub code          { @_ > 1 ? $_[0]->{code}          = $_[1] : $_[0]->{code} }
+sub compiled      { @_ > 1 ? $_[0]->{compiled}      = $_[1] : $_[0]->{compiled} }
+sub helpers       { @_ > 1 ? $_[0]->{helpers}       = $_[1] : $_[0]->{helpers} }
+sub filters       { @_ > 1 ? $_[0]->{filters}       = $_[1] : $_[0]->{filters} }
+sub prepend       { @_ > 1 ? $_[0]->{prepend}       = $_[1] : $_[0]->{prepend} }
+sub append        { @_ > 1 ? $_[0]->{append}        = $_[1] : $_[0]->{append} }
+sub escape        { @_ > 1 ? $_[0]->{escape}        = $_[1] : $_[0]->{escape} }
+sub tape          { @_ > 1 ? $_[0]->{tape}          = $_[1] : $_[0]->{tape} }
+sub path          { @_ > 1 ? $_[0]->{path}          = $_[1] : $_[0]->{path} }
+sub cache         { @_ > 1 ? $_[0]->{cache}         = $_[1] : $_[0]->{cache} }
+sub fullpath      { @_ > 1 ? $_[0]->{fullpath}      = $_[1] : $_[0]->{fullpath}; }
+sub cache_dir     { @_ > 1 ? $_[0]->{cache_dir}     = $_[1] : $_[0]->{cache_dir}; }
+sub cache_path    { @_ > 1 ? $_[0]->{cache_path}    = $_[1] : $_[0]->{cache_path}; }
+sub namespace     { @_ > 1 ? $_[0]->{namespace}     = $_[1] : $_[0]->{namespace}; }
+sub error         { @_ > 1 ? $_[0]->{error}         = $_[1] : $_[0]->{error} }
 
 sub helpers_arg {
     if (@_ > 1) {
@@ -168,12 +156,6 @@ sub helpers_arg {
     }
 }
 
-sub namespace {
-    @_ > 1
-      ? $_[0]->{namespace} = $_[1]
-      : $_[0]->{namespace};
-}
-sub error { @_ > 1 ? $_[0]->{error} = $_[1] : $_[0]->{error} }
 
 our @AUTOCLOSE = (qw/meta img link br hr input area param col base/);
 
@@ -1034,21 +1016,26 @@ sub render_file {
         $self->_cache_path($path, $cache_dir);
 
         # Exists same cache file ?
-        if (-e $self->cache_path && $self->_eq_mtime) {
-            return $self->_interpret_cached(@_);
+        if (-e $self->cache_path && (ref $self->fullpath eq 'SCALAR' || $self->_eq_mtime)) {
+          return $self->_interpret_cached(@_);
         }
     }
 
-    # Open file
-    my $file = IO::File->new;
-    $file->open($self->fullpath, 'r') or die "Can't open template '$path': $!";
-
-    # Slurp file
     my $tmpl = '';
-    while ($file->sysread(my $buffer, CHUNK_SIZE, 0)) {
-        $tmpl .= $buffer;
+    my $file = IO::File->new;
+    if (ref $self->fullpath eq 'SCALAR') { # virtual path
+      $tmpl = $self->fullpath;
+      $tmpl = $$tmpl;
+    } else {
+      # Open file
+      $file->open($self->fullpath, 'r') or die "Can't open template '$path': $!";
+
+      # Slurp file
+      while ($file->sysread(my $buffer, CHUNK_SIZE, 0)) {
+          $tmpl .= $buffer;
+      }
+      $file->close;
     }
-    $file->close;
 
     # Encoding
     $tmpl = decode($self->encoding, $tmpl) if $self->encoding;
@@ -1060,8 +1047,12 @@ sub render_file {
             # Create cache
             if ($file->open($self->cache_path, 'w')) {
                 binmode $file, ':utf8';
-                my $mtime = (stat($self->fullpath))[9];
-                print $file '#'.$mtime."\n".$self->code; # Write with file mtime
+                if (ref $self->fullpath eq 'SCALAR') {
+                  print $file $self->code; # Write without file mtime (virtual path)
+                } else {
+                  my $mtime = (stat($self->fullpath))[9];
+                  print $file '#'.$mtime."\n".$self->code; # Write with file mtime
+                }
                 $file->close;
             }
         }
@@ -1080,11 +1071,18 @@ sub _fullpath {
     }
 
     for my $p (@{$self->path}) {
+      if (ref $p eq 'HASH') { # virtual path
+        if (defined(my $content = $p->{$path})) {
+          $self->fullpath(\$content);
+          return;
+        }
+      } else {
         my $fullpath = File::Spec->catfile($p, $path);
         if (-r $fullpath) { # is readable ?
-            $self->fullpath($fullpath);
-            return;
+          $self->fullpath($fullpath);
+          return;
         }
+      }
     }
 
     Carp::croak("Can't find template '$path'");
@@ -1093,12 +1091,17 @@ sub _fullpath {
 sub _cache_dir {
     my $self = shift;
 
+    my $cache_prefix = (ref $self->fullpath eq 'SCALAR') 
+      ? 'HASH' 
+      : URI::Escape::uri_escape( 
+          File::Basename::dirname($self->fullpath) 
+        );
+
     my $cache_dir = File::Spec->catdir(
         $self->cache_dir,
-        URI::Escape::uri_escape(
-            File::Basename::dirname($self->fullpath)
-        ),
+        $cache_prefix,
     );
+
     if (not -e $cache_dir) {
         require File::Path;
         eval { File::Path::mkpath($cache_dir) };
@@ -1130,6 +1133,7 @@ sub _eq_mtime {
     $file->sysread(my $cache_mtime, length('#xxxxxxxxxx'));
     $file->close;
     my $orig_mtime = '#'.(stat($self->fullpath))[9];
+
     return $cache_mtime eq $orig_mtime;
 }
 
