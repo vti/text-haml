@@ -1,5 +1,11 @@
 Revision history for perl module Text::Haml
 
+0.990111
+
+    - Fix dependency list (Keedi Kim)
+
+0.990110 2013-10-16
+
 0.990109 2013-08-08
 
 0.990108 2013-04-22

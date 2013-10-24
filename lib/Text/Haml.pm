@@ -11,7 +11,7 @@ use File::Spec;
 use File::Basename ();
 use URI::Escape ();
 
-our $VERSION = '0.990110';
+our $VERSION = '0.990111';
 
 use constant CHUNK_SIZE => 4096;
 
