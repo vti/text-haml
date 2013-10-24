@@ -43,5 +43,8 @@ WriteMakefile(
         'File::Basename' => '0',
         'URI::Escape'    => '0',
     },
+    TEST_REQUIRES => {
+        'Data::Section::Simple' => '0',
+    },
     test => {TESTS => 't/*.t t/*/*.t t/*/*/*.t t/*/*/*/*.t'}
 );
