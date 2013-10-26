@@ -11,7 +11,7 @@ use File::Spec;
 use File::Basename ();
 use URI::Escape ();
 
-our $VERSION = '0.990110';
+our $VERSION = '0.990111';
 
 use constant CHUNK_SIZE => 4096;
 
@@ -1009,14 +1009,14 @@ sub render_file {
     # Set file fullpath
     $self->_fullpath($path);
 
-    if ($self->cache >= 1) {
+    if ($self->cache >= 1 && !(ref $self->fullpath eq 'SCALAR')) {
         # Make cache directory
         my $cache_dir = $self->_cache_dir;
         # Set cache path
         $self->_cache_path($path, $cache_dir);
 
-        # Exists same cache file ?
-        if (-e $self->cache_path && (ref $self->fullpath eq 'SCALAR' || $self->_eq_mtime)) {
+        # Exists same cache file?
+        if (-e $self->cache_path && $self->_eq_mtime) {
           return $self->_interpret_cached(@_);
         }
     }
@@ -1045,14 +1045,10 @@ sub render_file {
     if ($output = $self->render($tmpl, @_)) {
         if ($self->cache >= 1) {
             # Create cache
-            if ($file->open($self->cache_path, 'w')) {
+            if (!(ref $self->fullpath eq 'SCALAR') && $file->open($self->cache_path, 'w')) {
                 binmode $file, ':utf8';
-                if (ref $self->fullpath eq 'SCALAR') {
-                  print $file $self->code; # Write without file mtime (virtual path)
-                } else {
-                  my $mtime = (stat($self->fullpath))[9];
-                  print $file '#'.$mtime."\n".$self->code; # Write with file mtime
-                }
+                my $mtime = (stat($self->fullpath))[9];
+                print $file '#'.$mtime."\n".$self->code; # Write with file mtime
                 $file->close;
             }
         }
