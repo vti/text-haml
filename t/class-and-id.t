@@ -1,11 +1,15 @@
 #!/usr/bin/env perl
+package Foo;
+sub new { bless {}, shift }
+sub bar { 'baz' }
 
+package main;
 use strict;
 use warnings;
 
 use Text::Haml;
 
-use Test::More tests => 4;
+use Test::More tests => 5;
 
 my $haml = Text::Haml->new;
 
@@ -59,4 +63,11 @@ EOF
 is($output, <<'EOF');
 <foo class='bar'></foo>
 <bar class='bar baz'></bar>
+EOF
+
+$output = $haml->render(<<'EOF', foo => Foo->new());
+%span.badge{:class => "#{$foo->bar}"}
+EOF
+is($output, <<'EOF');
+<span class='badge baz'></span>
 EOF
