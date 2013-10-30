@@ -658,7 +658,7 @@ EOF
                         if ($name eq 'class') {
                             $el->{class} ||= [];
                             if ($value->{type} eq 'text') {
-                                push @{$el->{class}}, $text;
+                                push @{$el->{class}}, $self->_parse_text($text);
                             }
                             else {
                                 push @{$el->{class}}, qq/" . $text . "/;
