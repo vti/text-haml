@@ -243,9 +243,7 @@ Use Data::Section::Simple, and the path option of new(), which accepts HASH refe
     %header hello #{$user}
       %p test
 
-
 This way is the same as L<Text::Xslate>.
-Now caching for __DATA__ section not supported. 
 
 =head1 PERL SPECIFIC IMPLEMENTATION ISSUES
 
