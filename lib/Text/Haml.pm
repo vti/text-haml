@@ -1007,6 +1007,9 @@ sub render {
 sub _eq_checksum {
   my $self = shift;
 
+  # Exit if not virtual path
+  return 0 unless ref $self->fullpath eq 'SCALAR';
+
   return 1 if $self->cache == 2;
   return 0 if $self->cache == 0;
 
@@ -1158,7 +1161,7 @@ sub _cache_path {
 sub _eq_mtime {
     my $self = shift;
 
-    # Virtual path
+    # Exit if virtual path
     return 0 if ref $self->fullpath eq 'SCALAR';
 
     return 1 if $self->cache == 2;
