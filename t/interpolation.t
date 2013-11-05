@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 
-use Test::More tests => 8;
+use Test::More tests => 10;
 
 use Text::Haml;
 
@@ -104,4 +104,29 @@ EOF
 is($output, <<'EOF');
 <p>Alice has the role of sender. Bob has the role of recipient.</p>
 <p>Bob has the role of recipient. Alice has the role of sender.</p>
+EOF
+
+# Hashref interpolation inside filters
+$output = $haml->render(<<'EOF');
+- my $vars = { 
+-   settings => { type => 'text/javascript' },
+-   request => { uri_base => '/path/to' },
+- };
+:javascript
+  !window.jQuery && document.write('<script type="#{$vars->{settings}->{type}}" src="#{$vars->{request}->{uri_base}}/javascripts/jquery.js"><\/script>')
+EOF
+is($output, <<'EOF');
+<script type='text/javascript'>
+  //<![CDATA[
+    !window.jQuery && document.write('<script type="text/javascript" src="/path/to/javascripts/jquery.js"></script>')
+  //]]>
+</script>
+EOF
+
+# Interpolation custom expression inside #{}
+$output = $haml->render(<<'EOF');
+%p Number one: #{1+1}. Number two: #{2+3}
+EOF
+is($output, <<'EOF');
+<p>Number one: 2. Number two: 5</p>
 EOF

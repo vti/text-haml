@@ -12,7 +12,7 @@ Text::Haml - Haml Perl implementation
 
     my $html = $haml->render('%p foo'); # <p>foo</p>
 
-    $html = $haml->render('= $user', user => 'friend'); # <div>friend</div>
+    $html = $haml->render('%div= $user', user => 'friend'); # <div>friend</div>
 
     # Use Haml file
     $html = $haml->render_file('tmpl/index.haml', user => 'friend');
@@ -220,6 +220,30 @@ Renders Haml string. Returns undef on error. See error attribute.
 
 A helper method that loads a file and passes it to the render method.
 Since "%____vars" is used internally, you cannot use this as parameter name.
+
+=head1 COOKBOOK
+
+=head2 How to map __DATA__ sections to the include path
+
+Use Data::Section::Simple, and the path option of new(), which accepts HASH references which contain $file_name => $content mapping.
+
+    use Text::Haml;
+    use Data::Section::Simple;
+
+    my $vpath = Data::Section::Simple->new()->get_data_section();
+
+    my $haml = Text::Haml->new(
+      path => [$vpath],
+    );
+
+    print $haml->render_file('header.haml', user => 'friend');
+
+    __DATA__
+    @@ header.haml
+    %header hello #{$user}
+      %p test
+
+This way is the same as L<Text::Xslate>.
 
 =head1 PERL SPECIFIC IMPLEMENTATION ISSUES
 

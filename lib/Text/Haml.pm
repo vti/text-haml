@@ -10,6 +10,7 @@ use Carp ();
 use File::Spec;
 use File::Basename ();
 use URI::Escape ();
+use Digest::MD5;
 
 our $VERSION = '0.990111';
 
@@ -890,12 +891,12 @@ sub _parse_text {
         our $curly_brace_n;
         $curly_brace_n = qr/ (?> [^{}]+ | \{ (??{ $curly_brace_n }) \} )* /x;
 
-        if ($text =~ s/^(.*?)?(?<!\\)(\#\{$curly_brace_n\})//) {
+        if ($text =~ s/^(.*?)?(?<!\\)(\#\{$curly_brace_n\})//xms) {
             $found    = 1;
             $t        = $1;
             $variable = $2;
         }
-        elsif ($text =~ s/^(.*?)?\\\\(\#\{$curly_brace_n\})//) {
+        elsif ($text =~ s/^(.*?)?\\\\(\#\{$curly_brace_n\})//xms) {
             $found    = 1;
             $t        = $1;
             $variable = $2;
@@ -911,7 +912,7 @@ sub _parse_text {
             $variable =~ s/\#\{(.*)\}/$1/;
 
             my $prefix = $escape ? quotemeta("\\") : '';
-            $output .= qq/$prefix".$variable."/;
+            $output .= qq/$prefix".do { $variable }."/;
         }
         else {
             $text = $self->_parse_interpolation($text);
@@ -1002,6 +1003,38 @@ sub render {
     return $self->interpret(@_);
 }
 
+# For templates in __DATA__ section
+sub _eq_checksum {
+  my $self = shift;
+
+  # Exit if not virtual path
+  return 0 unless ref $self->fullpath eq 'SCALAR';
+
+  return 1 if $self->cache == 2;
+  return 0 if $self->cache == 0;
+
+  my $fullpath = $self->fullpath;
+  $fullpath = $$fullpath;
+
+  my $file = IO::File->new;
+  $file->open($self->cache_path, 'r') or return;
+  $file->sysread(my $cache_md5_checksum, 33); # 33 = # + hashsum
+  $file->close;
+
+  my $orig_md5_checksum = '#'.$self->_digest($fullpath);
+
+  return $cache_md5_checksum eq $orig_md5_checksum;
+}
+
+sub _digest {
+    my ($self, $content) = @_;
+
+    my $md5 = Digest::MD5->new();
+    $content = decode($self->encoding, $content) if $self->encoding;
+    $md5->add($content);
+    return $md5->hexdigest();
+}
+
 sub render_file {
     my $self = shift;
     my $path = shift;
@@ -1015,44 +1048,47 @@ sub render_file {
         # Set cache path
         $self->_cache_path($path, $cache_dir);
 
-        # Exists same cache file ?
-        if (-e $self->cache_path && (ref $self->fullpath eq 'SCALAR' || $self->_eq_mtime)) {
+        # Exists same cache file?
+        if (-e $self->cache_path && ($self->_eq_mtime || $self->_eq_checksum)) {
           return $self->_interpret_cached(@_);
         }
     }
 
-    my $tmpl = '';
+    my $content = '';
     my $file = IO::File->new;
     if (ref $self->fullpath eq 'SCALAR') { # virtual path
-      $tmpl = $self->fullpath;
-      $tmpl = $$tmpl;
+      $content = $self->fullpath;
+      $content = $$content;
     } else {
       # Open file
       $file->open($self->fullpath, 'r') or die "Can't open template '$path': $!";
 
       # Slurp file
       while ($file->sysread(my $buffer, CHUNK_SIZE, 0)) {
-          $tmpl .= $buffer;
+          $content .= $buffer;
       }
       $file->close;
     }
 
     # Encoding
-    $tmpl = decode($self->encoding, $tmpl) if $self->encoding;
+    $content = decode($self->encoding, $content) if $self->encoding;
 
     # Render
     my $output;
-    if ($output = $self->render($tmpl, @_)) {
+    if ($output = $self->render($content, @_)) {
         if ($self->cache >= 1) {
             # Create cache
             if ($file->open($self->cache_path, 'w')) {
                 binmode $file, ':utf8';
+
                 if (ref $self->fullpath eq 'SCALAR') {
-                  print $file $self->code; # Write without file mtime (virtual path)
+                  my $md5_checksum = $self->_digest($content);
+                  print $file '#'.$md5_checksum."\n".$self->code; # Write with file checksum (virtual path)
                 } else {
                   my $mtime = (stat($self->fullpath))[9];
                   print $file '#'.$mtime."\n".$self->code; # Write with file mtime
                 }
+
                 $file->close;
             }
         }
@@ -1124,6 +1160,9 @@ sub _cache_path {
 
 sub _eq_mtime {
     my $self = shift;
+
+    # Exit if virtual path
+    return 0 if ref $self->fullpath eq 'SCALAR';
 
     return 1 if $self->cache == 2;
     return 0 if $self->cache == 0;
