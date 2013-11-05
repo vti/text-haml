@@ -1,5 +1,10 @@
 Revision history for perl module Text::Haml
 
+{{$NEXT}}
+
+    - Fix support for caching of templates in __DATA__ section (TheAthlete)
+    - Fix hashref interpolation inside filters (TheAthlete)
+
 0.990111
 
     - Fix dependency list (Keedi Kim)
