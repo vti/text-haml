@@ -1,10 +1,8 @@
-=pod
-
-=head1 NAME
+# NAME
 
 Text::Haml - Haml Perl implementation
 
-=head1 SYNOPSIS
+# SYNOPSIS
 
     use Text::Haml;
 
@@ -12,43 +10,43 @@ Text::Haml - Haml Perl implementation
 
     my $html = $haml->render('%p foo'); # <p>foo</p>
 
-    $html = $haml->render('%div= $user', user => 'friend'); # <div>friend</div>
+    $html = $haml->render('= $user', user => 'friend'); # <div>friend</div>
 
     # Use Haml file
     $html = $haml->render_file('tmpl/index.haml', user => 'friend');
 
-=head1 DESCRIPTION
+# DESCRIPTION
 
-L<Text::Haml> implements Haml
-L<http://haml-lang.com/docs/yardoc/file.HAML_REFERENCE.html> specification.
+[Text::Haml](http://search.cpan.org/perldoc?Text::Haml) implements Haml
+[http://haml-lang.com/docs/yardoc/file.HAML\_REFERENCE.html](http://haml-lang.com/docs/yardoc/file.HAML\_REFERENCE.html) specification.
 
-L<Text::Haml> passes specification tests written by Norman Clarke
+[Text::Haml](http://search.cpan.org/perldoc?Text::Haml) passes specification tests written by Norman Clarke
 http://github.com/norman/haml-spec and supports only cross-language Haml
 features. Do not expect Ruby specific things to work.
 
-=head1 ATTRIBUTES
+# ATTRIBUTES
 
-L<Text::Haml> implements the following attributes:
+[Text::Haml](http://search.cpan.org/perldoc?Text::Haml) implements the following attributes:
 
-=head2 C<append>
+## `append`
 
 Holds the string of code that is appended to the generated Perl code.
 
-=head2 C<code>
+## `code`
 
 Holds the Perl code.
 
-=head2 C<compiled>
+## `compiled`
 
 Holds compiled code.
 
-=head2 C<encoding>
+## `encoding`
 
     $haml->encoding('utf-8');
 
 Default is utf-8.
 
-=head2 C<escape>
+## `escape`
 
 Escape subroutine presented as string.
 
@@ -64,17 +62,17 @@ Default is
         return $s;
     EOF
 
-=head2 C<escape_html>
+## `escape_html`
 
     $haml->escape_html(0);
 
 Switch on/off Haml output html escaping. Default is on.
 
-=head2 C<filters>
+## `filters`
 
 Holds filters.
 
-=head2 C<format>
+## `format`
 
     $haml->format('xhtml');
 
@@ -82,31 +80,31 @@ Supported formats: xhtml, html, html5.
 
 Default is xhtml.
 
-=head2 C<namespace>
+## `namespace`
 
 Holds the namespace under which the Perl package is generated.
 
-=head2 C<prepend>
+## `prepend`
 
 Holds the string of code that is prepended to the generated Perl code.
 
-=head2 C<vars>
+## `vars`
 
 Holds the variables that are passed during the rendering.
 
-=head2 C<vars_as_subs>
+## `vars_as_subs`
 
-When options is B<NOT SET> (by default) passed variables are normal Perl
-variables and are used with C<$> prefix.
+When options is __NOT SET__ (by default) passed variables are normal Perl
+variables and are used with `$` prefix.
 
     $haml->render('%p $var', var => 'hello');
 
-When this option is B<SET> passed variables are Perl lvalue
-subroutines and are used without C<$> prefix.
+When this option is __SET__ passed variables are Perl lvalue
+subroutines and are used without `$` prefix.
 
     $haml->render('%p var', var => 'hello');
 
-But if you declare Perl variable in a block, it must be used with C<$>
+But if you declare Perl variable in a block, it must be used with `$`
 prefix.
 
     $haml->render('<<EOF')
@@ -114,7 +112,7 @@ prefix.
         %p= $foo
     EOF
 
-=head2 C<helpers>
+## `helpers`
 
     helpers => {
         foo => sub {
@@ -128,85 +126,85 @@ prefix.
     }
 
 Holds helpers subroutines. Helpers can be called in Haml text as normal Perl
-functions. See also add_helper.
+functions. See also add\_helper.
 
-=head2 C<helpers_arg>
+## `helpers_arg`
 
     $haml->helpers_args($my_context);
 
-First argument passed to the helper (L<Text::Haml> instance by default).
+First argument passed to the helper ([Text::Haml](http://search.cpan.org/perldoc?Text::Haml) instance by default).
 
-=head2 C<error>
+## `error`
 
     $haml->error;
 
 Holds the last error.
 
-=head2 C<tape>
+## `tape`
 
 Holds parsed haml elements.
 
-=head2 C<path>
+## `path`
 
 Holds path of Haml templates. Current directory is a default.
 If you want to set several paths, arrayref can also be set up.
-This way is the same as L<Text::Xslate>.
+This way is the same as [Text::Xslate](http://search.cpan.org/perldoc?Text::Xslate).
 
-=head2 C<cache>
+## `cache`
 
 Holds cache level of Haml templates. 1 is a default.
 0 means "Not cached", 1 means "Checked template mtime" and 2 means "Used always cached".
-This way is the same as L<Text::Xslate>.
+This way is the same as [Text::Xslate](http://search.cpan.org/perldoc?Text::Xslate).
 
-=head2 C<cache_dir>
+## `cache_dir`
 
-Holds cache directory of Haml templates. $ENV{HOME}/.text_haml_cache is a default.
+Holds cache directory of Haml templates. $ENV{HOME}/.text\_haml\_cache is a default.
 Unless $ENV{HOME}, File::Spec->tempdir was used.
-This way is the same as L<Text::Xslate>.
+This way is the same as [Text::Xslate](http://search.cpan.org/perldoc?Text::Xslate).
 
-=head1 METHODS
+# METHODS
 
-=head2 C<new>
+## `new`
 
     my $haml = Text::Haml->new;
 
-=head2 C<add_helper>
+## `add_helper`
 
     $haml->add_helper(current_time => sub { time });
 
 Adds a new helper.
 
-=head2 C<add_filter>
+## `add_filter`
 
     $haml->add_filter(compress => sub { $_[0] =~ s/\s+/ /g; $_[0]});
 
 Adds a new filter.
 
-=head2 C<build>
+## `build`
 
     $haml->build(@_);
 
 Builds the Perl code.
 
-=head2 C<compile>
+## `compile`
 
     $haml->compile;
 
 Compiles parsed code.
 
-=head2 C<interpret>
+## `interpret`
 
     $haml->interpret(@_);
 
 Interprets compiled code.
 
-=head2 C<parse>
+## `parse`
 
     $haml->parse('%p foo');
 
 Parses Haml string building a tree.
 
-=head2 C<render>
+## `render`
 
     my $text = $haml->render('%p foo');
 
@@ -214,49 +212,25 @@ Parses Haml string building a tree.
 
 Renders Haml string. Returns undef on error. See error attribute.
 
-=head2 C<render_file>
+## `render_file`
 
     my $text = $haml->render_file('foo.haml', var => 'hello');
 
 A helper method that loads a file and passes it to the render method.
-Since "%____vars" is used internally, you cannot use this as parameter name.
+Since "%\_\_\_\_vars" is used internally, you cannot use this as parameter name.
 
-=head1 COOKBOOK
+# PERL SPECIFIC IMPLEMENTATION ISSUES
 
-=head2 How to map __DATA__ sections to the include path
-
-Use Data::Section::Simple, and the path option of new(), which accepts HASH references which contain $file_name => $content mapping.
-
-    use Text::Haml;
-    use Data::Section::Simple;
-
-    my $vpath = Data::Section::Simple->new()->get_data_section();
-
-    my $haml = Text::Haml->new(
-      path => [$vpath],
-    );
-
-    print $haml->render_file('header.haml', user => 'friend');
-
-    __DATA__
-    @@ header.haml
-    %header hello #{$user}
-      %p test
-
-This way is the same as L<Text::Xslate>.
-
-=head1 PERL SPECIFIC IMPLEMENTATION ISSUES
-
-=head2 String interpolation
+## String interpolation
 
 Despite of existing string interpolation in Perl, Ruby interpolation is also
 supported.
 
-$haml->render('%p Hello #{user}', user => 'foo')
+$haml->render('%p Hello \#{user}', user => 'foo')
 
-=head2 Hash keys
+## Hash keys
 
-When declaring tag attributes C<:> symbol can be used.
+When declaring tag attributes `:` symbol can be used.
 
 $haml->render("%a{:href => 'bar'}");
 
@@ -265,31 +239,43 @@ work with Ruby Haml implementation parser.
 
 $haml->render("%a{href => 'bar'}");
 
-=head1 DEVELOPMENT
+# DEVELOPMENT
 
-=head2 Repository
+## Repository
 
     http://github.com/vti/text-haml
 
-=head1 AUTHOR
+# AUTHOR
 
-Viacheslav Tykhanovskyi, C<vti@cpan.org>.
+Viacheslav Tykhanovskyi, `vti@cpan.org`.
 
-=head1 CREDITS
+# CREDITS
 
-In alphabetical order:
+In order of appearance:
 
 Nick Ragouzis
 
 Norman Clarke
 
-Wanradt Koell
+rightgo09
 
-=head1 COPYRIGHT AND LICENSE
+Breno G. de Oliveira (garu)
 
-Copyright (C) 2009-2012, Viacheslav Tykhanovskyi.
+Yuya Tanaka
+
+Wanradt Koell (wanradt)
+
+Keedi Kim
+
+Carlos Lima
+
+Jason Younker
+
+TheAthlete
+
+# COPYRIGHT AND LICENSE
+
+Copyright (C) 2009-2013, Viacheslav Tykhanovskyi.
 
 This program is free software, you can redistribute it and/or modify it under
 the terms of the Artistic License version 2.0.
-
-=cut
