@@ -715,12 +715,12 @@ EOF
 
                 $output .= qq|"$offset<$el->{name}$tail$attrs$ending>"|;
 
-                if ($el->{text} && $el->{expr}) {
-                    $output .= '. (do {' . $el->{text} . '} || "")';
+                if ($el->{text} && $el->{expr} && $escape eq 'escape') {
+                    $output .= '. (' .qq/ $escape(/. ' do {' . $el->{text} . '} ) || "")';
                     $output .= qq| . "</$el->{name}>"|;
                 }
                 elsif ($el->{text}) {
-                    $output .= qq/. $escape(/ . '"'
+                    $output .= qq/. $escape(/ . '"' 
                       . $self->_parse_text($el->{text}) . '");';
                     $output .= qq|\$_H .= "</$el->{name}>"|
                       unless $el->{autoclose};
@@ -921,7 +921,7 @@ sub _parse_text {
         }
     }
 
-    return $expr ? qq/"$output"/ : $output;
+    return $expr ? qq/$output/ : $output;
 }
 
 sub _parse_interpolation {
