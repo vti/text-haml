@@ -715,9 +715,14 @@ EOF
 
                 $output .= qq|"$offset<$el->{name}$tail$attrs$ending>"|;
 
-                if ($el->{text} && $el->{expr} && $escape eq 'escape') {
+                if ($el->{text} && $el->{expr}) {
+                  if ($escape eq 'escape') {
                     $output .= '. (' .qq/ $escape(/. ' do {' . $el->{text} . '} ) || "")';
                     $output .= qq| . "</$el->{name}>"|;
+                  } else {
+                    $output .= '. ( do {' . $el->{text} . '} || "")';
+                    $output .= qq| . "</$el->{name}>"|;
+                  }
                 }
                 elsif ($el->{text}) {
                     $output .= qq/. $escape(/ . '"' 
