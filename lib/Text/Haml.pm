@@ -1075,6 +1075,8 @@ sub render_file {
       $file->close;
     }
 
+    $content =~ s/\r//g;
+
     # Encoding
     $content = decode($self->encoding, $content) if $self->encoding;
 
