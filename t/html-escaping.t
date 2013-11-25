@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 
-use Test::More tests => 8;
+use Test::More tests => 10;
 
 use Text::Haml;
 
@@ -77,4 +77,22 @@ $output = $haml->render(<<'EOF');
 EOF
 is($output, <<'EOF');
 <div><h1 id="A > B">text</h1></div>
+EOF
+
+$output = $haml->render(<<'EOF');
+- my $text = '<h1>text</h1>';
+%div= $text
+EOF
+is($output, <<'EOF');
+<div><h1>text</h1></div>
+EOF
+
+$haml->escape_html(1);
+
+$output = $haml->render(<<'EOF');
+- my $text = '<h1>text</h1>';
+%div!= $text
+EOF
+is($output, <<'EOF');
+<div><h1>text</h1></div>
 EOF
