@@ -109,6 +109,13 @@ EOF
               . "  //]]>\n"
               . "</script>";
         },
+        css => sub {
+            "<style type='text/css'>\n"
+              . "  //<![CDATA[\n"
+              . "    $_[0]\n"
+              . "  //]]>\n"
+              . "</style>";
+        },
     };
 
     my $self = {%$attrs, @_};
