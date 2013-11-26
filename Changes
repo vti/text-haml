@@ -2,6 +2,11 @@ Revision history for perl module Text::Haml
 
 {{$NEXT}}
 
+0.990113 2013-11-26T09:36:12Z
+
+    - Fix test failure on windows (\r\n -> \n) (TheAthlete)
+    - Fix bug with html escaping (TheAthlete)
+
 0.990112 2013-11-05T18:20:38Z
 
     - Fix support for caching of templates in __DATA__ section (TheAthlete)

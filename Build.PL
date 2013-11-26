@@ -23,7 +23,7 @@ my %args = (
         'Module::Build' => 0.38,
     },
 
-    name            => 'text-haml',
+    name            => 'Text-Haml',
     module_name     => 'Text::Haml',
     allow_pureperl => 0,
 
