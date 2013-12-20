@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 
-use Test::More tests => 6;
+use Test::More tests => 7;
 
 use Text::Haml;
 
@@ -51,6 +51,27 @@ is($output, <<'EOF');
     alert('boo');
   //]]>
 </script>
+<p></p>
+EOF
+
+# :css
+$output = $haml->render(<<'EOF');
+:css
+  #paragraph1 {
+    margin: 0;
+    padding: 0;
+  }
+%p
+EOF
+is($output, <<'EOF');
+<style type='text/css'>
+  //<![CDATA[
+    #paragraph1 {
+margin: 0;
+padding: 0;
+}
+  //]]>
+</style>
 <p></p>
 EOF
 
