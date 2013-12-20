@@ -5,7 +5,7 @@ use warnings;
 
 use Text::Haml;
 
-use Test::More tests => 13;
+use Test::More tests => 15;
 
 my $haml = Text::Haml->new;
 my $output;
@@ -45,6 +45,23 @@ $output = $haml->render(<<'EOF');
 EOF
 is($output, <<'EOF');
 foo
+EOF
+
+$output = $haml->render(<<'EOF');
+%div= undef || 0
+EOF
+is($output, <<'EOF');
+<div>0</div>
+EOF
+
+$output = $haml->render(<<'EOF');
+%div
+  = undef || 0
+EOF
+is($output, <<'EOF');
+<div>
+  0
+</div>
 EOF
 
 # Running Perl: -
@@ -150,13 +167,17 @@ EOF
 $output = $haml->render(<<'EOF', errors => {});
 %foo= 1 if 1
 %bar= 1 if 0
+%baz= 1 if undef
 = "1" if 1
 = "0" if 0
+= "0" if undef
 EOF
 is($output, <<'EOF');
 <foo>1</foo>
-<bar></bar>
+<bar>0</bar>
+<baz></baz>
 1
+0
 
 EOF
 

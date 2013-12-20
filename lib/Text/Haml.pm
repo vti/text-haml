@@ -90,6 +90,7 @@ sub new {
 
     $attrs->{escape}       = <<'EOF';
     my $s = shift;
+    return unless defined $s;
     $s =~ s/&/&amp;/g;
     $s =~ s/</&lt;/g;
     $s =~ s/>/&gt;/g;
@@ -717,7 +718,7 @@ EOF
 
                 if ($el->{text} && $el->{expr}) {
                   if ($escape eq 'escape') {
-                    $output .= '. (' .qq/ $escape(/. ' do {' . $el->{text} . '} ) || "")';
+                    $output .= '. ( do { my $ret = ' .  qq/ $escape( do { $el->{text} } )/ . '; defined($ret) ? $ret : "" } )';
                     $output .= qq| . "</$el->{name}>"|;
                   } else {
                     $output .= '. ( do {' . $el->{text} . '} || "")';
@@ -753,7 +754,7 @@ EOF
                 $el->{text} = '' unless defined $el->{text};
 
                 if ($el->{expr}) {
-                    $output .= qq/. $escape / . +$el->{text};
+                    $output .= '. ( do { my $ret = ' .  qq/ $escape( do { $el->{text} } )/ . '; defined($ret) ? $ret : "" } )';
                     $output .= qq/;\$_H .= "\n"/;
                 }
                 elsif ($el->{text}) {
@@ -1316,6 +1317,7 @@ Default is
 
     $haml->escape(<<'EOF');
         my $s = shift;
+        return unless defined $s;
         $s =~ s/&/&amp;/g;
         $s =~ s/</&lt;/g;
         $s =~ s/>/&gt;/g;
