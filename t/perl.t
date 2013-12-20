@@ -167,13 +167,17 @@ EOF
 $output = $haml->render(<<'EOF', errors => {});
 %foo= 1 if 1
 %bar= 1 if 0
+%baz= 1 if undef
 = "1" if 1
 = "0" if 0
+= "0" if undef
 EOF
 is($output, <<'EOF');
 <foo>1</foo>
-<bar></bar>
+<bar>0</bar>
+<baz></baz>
 1
+0
 
 EOF
 
