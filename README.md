@@ -54,6 +54,7 @@ Default is
 
     $haml->escape(<<'EOF');
         my $s = shift;
+        return unless defined $s;
         $s =~ s/&/&amp;/g;
         $s =~ s/</&lt;/g;
         $s =~ s/>/&gt;/g;

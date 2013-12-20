@@ -66,7 +66,7 @@
          "web" : "https://github.com/vti/text-haml"
       }
    },
-   "version" : "0.990113",
+   "version" : "0.990114",
    "x_contributors" : [
       "enosis <enosis@github.com>",
       "rightgo09 <skyarrow09@gmail.com>",
@@ -76,9 +76,9 @@
       "Jason Younker <jason@ynkr.org>",
       "Neil Bowers <neil@bowers.com>",
       "Evgenni Grishkovelli <grishkovelli@gmail.com>",
-      "Keedi Kim <keedi.k@gmail.com>",
       "Hyungsuk Hong <aanoaa@gmail.com>",
       "TheAthlete <theathlet@yandex.ru>",
+      "Keedi Kim <keedi.k@gmail.com>",
       "Viacheslav Tykhanovskyi <viacheslav.t@gmail.com>"
    ]
 }
