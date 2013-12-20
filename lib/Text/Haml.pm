@@ -717,7 +717,7 @@ EOF
 
                 if ($el->{text} && $el->{expr}) {
                   if ($escape eq 'escape') {
-                    $output .= '. (' .qq/ $escape(/. ' do {' . $el->{text} . '} ) || "")';
+                    $output .= '. ( do { my $ret = ' .  qq/ $escape( do { $el->{text} } )/ . '; defined($ret) ? $ret : "" } )';
                     $output .= qq| . "</$el->{name}>"|;
                   } else {
                     $output .= '. ( do {' . $el->{text} . '} || "")';
