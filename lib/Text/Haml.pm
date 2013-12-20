@@ -753,7 +753,7 @@ EOF
                 $el->{text} = '' unless defined $el->{text};
 
                 if ($el->{expr}) {
-                    $output .= qq/. $escape / . +$el->{text};
+                    $output .= '. ( do { my $ret = ' .  qq/ $escape( do { $el->{text} } )/ . '; defined($ret) ? $ret : "" } )';
                     $output .= qq/;\$_H .= "\n"/;
                 }
                 elsif ($el->{text}) {
