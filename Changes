@@ -2,6 +2,10 @@ Revision history for perl module Text::Haml
 
 {{$NEXT}}
 
+0.990115 2014-01-18T16:06:12Z
+
+    - Fix comment in :css filter (TheAthlete)
+
 0.990114 2013-12-20T09:47:23Z
 
     - correct behaviour when working with false and undefined values (Keedi Kim)
