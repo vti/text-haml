@@ -65,12 +65,12 @@ $output = $haml->render(<<'EOF');
 EOF
 is($output, <<'EOF');
 <style type='text/css'>
-  //<![CDATA[
+  /*<![CDATA[*/
     #paragraph1 {
 margin: 0;
 padding: 0;
 }
-  //]]>
+  /*]]>*/
 </style>
 <p></p>
 EOF

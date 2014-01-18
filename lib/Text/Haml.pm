@@ -112,9 +112,9 @@ EOF
         },
         css => sub {
             "<style type='text/css'>\n"
-              . "  //<![CDATA[\n"
+              . "  /*<![CDATA[*/\n"
               . "    $_[0]\n"
-              . "  //]]>\n"
+              . "  /*]]>*/\n"
               . "</style>";
         },
     };
