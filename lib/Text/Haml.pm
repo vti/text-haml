@@ -296,7 +296,7 @@ sub parse {
         }
 
         # HTML comment
-        if ($line =~ m/^\/(?:\[if (.*)?\])?(?: (.*))?/) {
+        if ($line =~ m/^\/(?:\[if (.*)?\])?(?: *(.*))?/) {
             $el->{type} = 'html_comment';
             $el->{if}   = $1 if $1;
             $el->{text} = $2 if $2;

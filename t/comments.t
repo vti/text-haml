@@ -5,7 +5,7 @@ use warnings;
 
 use Text::Haml;
 
-use Test::More tests => 12;
+use Test::More tests => 14;
 
 my $haml = Text::Haml->new;
 
@@ -14,6 +14,30 @@ my $haml = Text::Haml->new;
 my $output = $haml->render(<<'EOF');
 %peanutbutterjelly
   / This is the peanutbutterjelly element
+  I like sandwiches!
+EOF
+is($output, <<'EOF');
+<peanutbutterjelly>
+  <!-- This is the peanutbutterjelly element -->
+  I like sandwiches!
+</peanutbutterjelly>
+EOF
+
+$output = $haml->render(<<'EOF');
+%peanutbutterjelly
+  /This is the peanutbutterjelly element
+  I like sandwiches!
+EOF
+is($output, <<'EOF');
+<peanutbutterjelly>
+  <!-- This is the peanutbutterjelly element -->
+  I like sandwiches!
+</peanutbutterjelly>
+EOF
+
+$output = $haml->render(<<'EOF');
+%peanutbutterjelly
+  /         This is the peanutbutterjelly element
   I like sandwiches!
 EOF
 is($output, <<'EOF');
