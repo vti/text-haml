@@ -5,7 +5,7 @@ use warnings;
 
 use Text::Haml;
 
-use Test::More tests => 11;
+use Test::More tests => 12;
 
 my $haml = Text::Haml->new;
 
@@ -69,6 +69,20 @@ $output = $haml->render(<<'EOF');
   -# This is a comment
   %p bar
   %strong baz
+EOF
+is($output, <<'EOF');
+<div id='foo'>
+  <p>bar</p>
+  <strong>baz</strong>
+</div>
+EOF
+
+# Text::Haml Comments: Inline -# inside tag (does not add newline in last line)
+$output = $haml->render(<<'EOF');
+%div#foo
+  %p bar
+  %strong baz
+  -# This is a comment
 EOF
 is($output, <<'EOF');
 <div id='foo'>

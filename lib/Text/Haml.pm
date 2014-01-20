@@ -864,7 +864,7 @@ EOF
             $ending .= "-->";
         }
 
-        push @lines, qq|\$_H .= "$offset$ending\n";|;
+        push @lines, qq|\$_H .= "$offset$ending\n";| if $ending;
     }
 
     if ($lines[-1]) {
