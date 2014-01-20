@@ -616,6 +616,7 @@ EOF
                 && $prev_stack_el->{level} >= $el->{level})
             {
                 pop @$stack;
+                undef $prev_stack_el;
             }
             else {
                 next ELEM;

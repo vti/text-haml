@@ -5,7 +5,7 @@ use warnings;
 
 use Text::Haml;
 
-use Test::More tests => 10;
+use Test::More tests => 11;
 
 my $haml = Text::Haml->new;
 
@@ -61,6 +61,20 @@ EOF
 is($output, <<'EOF');
 <p>foo</p>
 <p>bar</p>
+EOF
+
+# Text::Haml Comments: Inline -# inside tag
+$output = $haml->render(<<'EOF');
+%div#foo
+  -# This is a comment
+  %p bar
+  %strong baz
+EOF
+is($output, <<'EOF');
+<div id='foo'>
+  <p>bar</p>
+  <strong>baz</strong>
+</div>
 EOF
 
 # Text::Haml Comments: Nested -#
