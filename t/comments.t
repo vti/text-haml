@@ -11,6 +11,7 @@ my $haml = Text::Haml->new;
 
 # HTML Comments: /
 
+# HTML comment with white space after the forward slash character
 my $output = $haml->render(<<'EOF');
 %peanutbutterjelly
   / This is the peanutbutterjelly element
@@ -36,6 +37,7 @@ is($output, <<'EOF');
 </peanutbutterjelly>
 EOF
 
+# HTML comment without white space after the forward slash character
 $output = $haml->render(<<'EOF');
 %peanutbutterjelly
   /This is the peanutbutterjelly element
@@ -48,6 +50,7 @@ is($output, <<'EOF');
 </peanutbutterjelly>
 EOF
 
+# HTML comment with more white spaces after the forward slash character
 $output = $haml->render(<<'EOF');
 %peanutbutterjelly
   /         This is the peanutbutterjelly element
@@ -60,6 +63,7 @@ is($output, <<'EOF');
 </peanutbutterjelly>
 EOF
 
+# HTML comment wrap indented sections of code
 $output = $haml->render(<<'EOF');
 /
   %p This does not render...
