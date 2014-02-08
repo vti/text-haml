@@ -798,7 +798,8 @@ EOF
                 $output .= qq/ . "[if $el->{if}]>"/ if $el->{if};
 
                 if ($el->{text}) {
-                    $output .= qq/. " $el->{text} -->\n"/;
+                    $output .= '." ' . quotemeta($el->{text}) . ' ".'; 
+                    $output .= qq/"-->\n"/;
                 }
                 else {
                     $output .= qq/. "\n"/;

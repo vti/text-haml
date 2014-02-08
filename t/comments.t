@@ -5,7 +5,7 @@ use warnings;
 
 use Text::Haml;
 
-use Test::More tests => 14;
+use Test::More tests => 15;
 
 my $haml = Text::Haml->new;
 
@@ -19,6 +19,19 @@ EOF
 is($output, <<'EOF');
 <peanutbutterjelly>
   <!-- This is the peanutbutterjelly element -->
+  I like sandwiches!
+</peanutbutterjelly>
+EOF
+
+# HTML comment with double quotes
+$output = $haml->render(<<'EOF');
+%peanutbutterjelly
+  / This is the "peanutbutterjelly" element
+  I like sandwiches!
+EOF
+is($output, <<'EOF');
+<peanutbutterjelly>
+  <!-- This is the "peanutbutterjelly" element -->
   I like sandwiches!
 </peanutbutterjelly>
 EOF
