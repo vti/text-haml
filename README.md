@@ -240,6 +240,28 @@ work with Ruby Haml implementation parser.
 
 $haml->render("%a{href => 'bar'}");
 
+## Using with Data::Section::Simple
+
+When using the Data::Section::Simple, you need to unset the variable `encoding` in the constructor or using the `encoding` attribute of the Text::Haml:
+
+    use Data::Section::Simple qw/get_data_section/;
+    my $vpath = get_data_section;
+
+    my $haml = Text::Haml->new(cache => 0, path => $vpath, encoding => '');
+    # or
+    #my $haml = Text::Haml->new(cache => 0, path => $vpath);
+    #$haml->encoding(''); # encoding attribute
+
+    my $index = $haml->render_file('index.haml');
+    say $index;
+
+    __DATA__
+
+    @@ index.haml
+    %strong текст
+
+see [Data::Section::Simple#utf8-pragma](https://metacpan.org/pod/Data::Section::Simple#utf8-pragma)
+
 # DEVELOPMENT
 
 ## Repository

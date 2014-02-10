@@ -1270,6 +1270,8 @@ sub _doctype {
 1;
 __END__
 
+=encoding utf-8
+
 =head1 NAME
 
 Text::Haml - Haml Perl implementation
@@ -1511,6 +1513,28 @@ Perl-style is supported but not recommented, since your Haml template won't
 work with Ruby Haml implementation parser.
 
 $haml->render("%a{href => 'bar'}");
+
+=head2 Using with Data::Section::Simple
+
+When using the Data::Section::Simple, you need to unset the variable C<encoding> in the constructor or using the C<encoding> attribute of the Text::Haml:
+
+    use Data::Section::Simple qw/get_data_section/;
+    my $vpath = get_data_section;
+
+    my $haml = Text::Haml->new(cache => 0, path => $vpath, encoding => '');
+    # or
+    #my $haml = Text::Haml->new(cache => 0, path => $vpath);
+    #$haml->encoding(''); # encoding attribute
+
+    my $index = $haml->render_file('index.haml');
+    say $index;
+
+    __DATA__
+
+    @@ index.haml
+    %strong текст
+
+see L<https://metacpan.org/pod/Data::Section::Simple#utf8-pragma>
 
 =head1 DEVELOPMENT
 
