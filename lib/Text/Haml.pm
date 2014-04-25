@@ -1481,15 +1481,58 @@ Parses Haml string building a tree.
 
 =head2 C<render>
 
-    my $text = $haml->render('%p foo');
+$haml->render(Haml_string: Str [, %vars: Hash]): Str
 
-    my $text = $haml->render('%p var', var => 'hello');
+    my $text = $haml->render('%p foo'); # <p>foo</p>
 
-Renders Haml string. Returns undef on error. See error attribute.
+    my $text = $haml->render('%p= $var', var => 'hello'); # <p>hello</p>
+
+    my %foo = ( bar => 'hello', baz => 'world', );
+    my $text = $haml->render('%p= "$bar $baz"', %foo); # <p>hello world</p>
+
+    my %foo = ( bar => 'hello', baz => 'world', );
+    my $text = $haml->render('%p= "$var->{bar} $var->{baz}"', var => \%foo); # <p>hello world</p>
+
+    my %foo = (var => { bar => 'hello', baz => 'world' });
+    my $text = $haml->render('%p= $var->{bar} ." ". $var->{baz}', %foo); # <p>hello world</p>
+
+    my %foo = (var => [ qw/hello world/ ]);
+    my $page = $haml->render('%p= "$var->[0] $var->[1]"', %foo); # <p>hello world</p>
+
+Gets Haml string and optional variables. Returns undef on error. See error attribute.
 
 =head2 C<render_file>
 
-    my $text = $haml->render_file('foo.haml', var => 'hello');
+$haml->render_file(filename: Str [, %vars: Hash]): Str
+
+The file name can be a file on disk (the default path is the current directory) or virtual path to the file (if you use the module Data::Section::Simple). 
+The file path specified in the constructor of a template engine in attribute 'path'
+
+    # Current directory is a default.
+    my $haml = Text::Haml->new;
+    my %foo = ( bar => 'hello', baz => 'world', );
+    my $page = $haml->render_file('foo.haml', var => \%foo); # <p>hello world</p>
+
+    # Set directory 'template'
+    my $haml = Text::Haml->new(path => 'template');
+    my %foo = ( bar => 'hello', baz => 'world', );
+    my $page = $haml->render_file('foo.haml', var => \%foo); # <p>hello world</p>
+
+    # Set virtual path (with Data::Section::Simple)
+    use Data::Section::Simple qw/get_data_section/;
+
+    my $vpath = get_data_section;
+
+    my $haml = Text::Haml->new(path => [$vpath]);
+    my %foo = ( bar => 'hello', baz => 'world', );
+    my $page = $haml->render_file('foo.haml', var => \%foo); # <p>hello world</p>
+
+    __DATA__
+
+    @@ foo.haml
+    %p= "$var->{bar} $var->{baz}"
+
+For more examples with variables see render method
 
 A helper method that loads a file and passes it to the render method.
 Since "%____vars" is used internally, you cannot use this as parameter name.
