@@ -4,7 +4,7 @@
       "Viacheslav Tykhanovskyi, C<vti@cpan.org>."
    ],
    "dynamic_config" : 0,
-   "generated_by" : "Minilla/v0.7.5, CPAN::Meta::Converter version 2.130880",
+   "generated_by" : "Minilla/v0.14.1, CPAN::Meta::Converter version 2.120921",
    "license" : [
       "unknown"
    ],
@@ -36,7 +36,8 @@
       "develop" : {
          "requires" : {
             "Test::CPAN::Meta" : "0",
-            "Test::MinimumVersion" : "0.10108",
+            "Test::MinimumVersion::Fast" : "0.04",
+            "Test::PAUSE::Permissions" : "0.04",
             "Test::Pod" : "1.41",
             "Test::Spellunker" : "v0.2.7"
          }
@@ -66,7 +67,7 @@
          "web" : "https://github.com/vti/text-haml"
       }
    },
-   "version" : "0.990115",
+   "version" : "0.990116",
    "x_contributors" : [
       "enosis <enosis@github.com>",
       "rightgo09 <skyarrow09@gmail.com>",
@@ -79,6 +80,6 @@
       "Hyungsuk Hong <aanoaa@gmail.com>",
       "Keedi Kim <keedi.k@gmail.com>",
       "TheAthlete <theathlet@yandex.ru>",
-      "Viacheslav Tykhanovskyi <viacheslav.t@gmail.com>"
+      "vti <viacheslav.t@gmail.com>"
    ]
 }

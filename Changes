@@ -2,6 +2,16 @@ Revision history for perl module Text::Haml
 
 {{$NEXT}}
 
+0.990116 2014-04-25T10:06:26Z
+
+    [Documentation]
+    - Update docs on how to use Data::Section::Simple (TheAthlete)
+    [Fixes]
+    - Bug fix in html comments with double quotes (TheAthlete)
+    - Bug fix html comment (TheAthlete)
+    - Fixed bug with adding a newline in the last line of the template (TheAthlete)
+    - Bug fix comment haml inside tag (TheAthlete)
+
 0.990115 2014-01-18T16:06:12Z
 
     - Fix comment in :css filter (TheAthlete)

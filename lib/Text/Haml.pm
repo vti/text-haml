@@ -12,7 +12,7 @@ use File::Basename ();
 use URI::Escape ();
 use Digest::MD5;
 
-our $VERSION = '0.990115';
+our $VERSION = '0.990116';
 
 use constant CHUNK_SIZE => 4096;
 

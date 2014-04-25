@@ -17,16 +17,16 @@ Text::Haml - Haml Perl implementation
 
 # DESCRIPTION
 
-[Text::Haml](http://search.cpan.org/perldoc?Text::Haml) implements Haml
-[http://haml-lang.com/docs/yardoc/file.HAML\_REFERENCE.html](http://haml-lang.com/docs/yardoc/file.HAML\_REFERENCE.html) specification.
+[Text::Haml](https://metacpan.org/pod/Text::Haml) implements Haml
+[http://haml-lang.com/docs/yardoc/file.HAML\_REFERENCE.html](http://haml-lang.com/docs/yardoc/file.HAML_REFERENCE.html) specification.
 
-[Text::Haml](http://search.cpan.org/perldoc?Text::Haml) passes specification tests written by Norman Clarke
+[Text::Haml](https://metacpan.org/pod/Text::Haml) passes specification tests written by Norman Clarke
 http://github.com/norman/haml-spec and supports only cross-language Haml
 features. Do not expect Ruby specific things to work.
 
 # ATTRIBUTES
 
-[Text::Haml](http://search.cpan.org/perldoc?Text::Haml) implements the following attributes:
+[Text::Haml](https://metacpan.org/pod/Text::Haml) implements the following attributes:
 
 ## `append`
 
@@ -95,12 +95,12 @@ Holds the variables that are passed during the rendering.
 
 ## `vars_as_subs`
 
-When options is __NOT SET__ (by default) passed variables are normal Perl
+When options is **NOT SET** (by default) passed variables are normal Perl
 variables and are used with `$` prefix.
 
     $haml->render('%p $var', var => 'hello');
 
-When this option is __SET__ passed variables are Perl lvalue
+When this option is **SET** passed variables are Perl lvalue
 subroutines and are used without `$` prefix.
 
     $haml->render('%p var', var => 'hello');
@@ -133,7 +133,7 @@ functions. See also add\_helper.
 
     $haml->helpers_args($my_context);
 
-First argument passed to the helper ([Text::Haml](http://search.cpan.org/perldoc?Text::Haml) instance by default).
+First argument passed to the helper ([Text::Haml](https://metacpan.org/pod/Text::Haml) instance by default).
 
 ## `error`
 
@@ -149,19 +149,19 @@ Holds parsed haml elements.
 
 Holds path of Haml templates. Current directory is a default.
 If you want to set several paths, arrayref can also be set up.
-This way is the same as [Text::Xslate](http://search.cpan.org/perldoc?Text::Xslate).
+This way is the same as [Text::Xslate](https://metacpan.org/pod/Text::Xslate).
 
 ## `cache`
 
 Holds cache level of Haml templates. 1 is a default.
 0 means "Not cached", 1 means "Checked template mtime" and 2 means "Used always cached".
-This way is the same as [Text::Xslate](http://search.cpan.org/perldoc?Text::Xslate).
+This way is the same as [Text::Xslate](https://metacpan.org/pod/Text::Xslate).
 
 ## `cache_dir`
 
 Holds cache directory of Haml templates. $ENV{HOME}/.text\_haml\_cache is a default.
 Unless $ENV{HOME}, File::Spec->tempdir was used.
-This way is the same as [Text::Xslate](http://search.cpan.org/perldoc?Text::Xslate).
+This way is the same as [Text::Xslate](https://metacpan.org/pod/Text::Xslate).
 
 # METHODS
 
@@ -227,7 +227,7 @@ Since "%\_\_\_\_vars" is used internally, you cannot use this as parameter name.
 Despite of existing string interpolation in Perl, Ruby interpolation is also
 supported.
 
-$haml->render('%p Hello \#{user}', user => 'foo')
+$haml->render('%p Hello #{user}', user => 'foo')
 
 ## Hash keys
 
@@ -260,7 +260,7 @@ When using the Data::Section::Simple, you need to unset the variable `encoding` 
     @@ index.haml
     %strong текст
 
-see [Data::Section::Simple#utf8-pragma](https://metacpan.org/pod/Data::Section::Simple#utf8-pragma)
+see [https://metacpan.org/pod/Data::Section::Simple#utf8-pragma](https://metacpan.org/pod/Data::Section::Simple#utf8-pragma)
 
 # DEVELOPMENT
 
