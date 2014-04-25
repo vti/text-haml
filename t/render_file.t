@@ -3,15 +3,17 @@
 use strict;
 use warnings;
 
-use Text::Haml;
+use Test::More;
 
-use Test::More tests => 10;
+eval "use Data::Section::Simple";
+plan skip_all => 'Data::Section::Simple required for this test!' if $@;
+
+use Text::Haml;
 
 use IO::File;
 use URI::Escape ();
 use File::Spec;
 use File::Temp qw/ tempdir /;
-use Data::Section::Simple;
 
 my $file = IO::File->new;
 # cache_dir
@@ -103,6 +105,8 @@ is($output, <<'EOF');
 <p class='title'>RENDER_DATA_SECTION_TEST</p>
 <p>TEST</p>
 EOF
+
+done_testing;
 
 __DATA__
 @@ index.haml
