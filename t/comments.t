@@ -5,12 +5,13 @@ use warnings;
 
 use Text::Haml;
 
-use Test::More tests => 10;
+use Test::More tests => 15;
 
 my $haml = Text::Haml->new;
 
 # HTML Comments: /
 
+# HTML comment with white space after the forward slash character
 my $output = $haml->render(<<'EOF');
 %peanutbutterjelly
   / This is the peanutbutterjelly element
@@ -23,6 +24,46 @@ is($output, <<'EOF');
 </peanutbutterjelly>
 EOF
 
+# HTML comment with double quotes
+$output = $haml->render(<<'EOF');
+%peanutbutterjelly
+  / This is the "peanutbutterjelly" element
+  I like sandwiches!
+EOF
+is($output, <<'EOF');
+<peanutbutterjelly>
+  <!-- This is the "peanutbutterjelly" element -->
+  I like sandwiches!
+</peanutbutterjelly>
+EOF
+
+# HTML comment without white space after the forward slash character
+$output = $haml->render(<<'EOF');
+%peanutbutterjelly
+  /This is the peanutbutterjelly element
+  I like sandwiches!
+EOF
+is($output, <<'EOF');
+<peanutbutterjelly>
+  <!-- This is the peanutbutterjelly element -->
+  I like sandwiches!
+</peanutbutterjelly>
+EOF
+
+# HTML comment with more white spaces after the forward slash character
+$output = $haml->render(<<'EOF');
+%peanutbutterjelly
+  /         This is the peanutbutterjelly element
+  I like sandwiches!
+EOF
+is($output, <<'EOF');
+<peanutbutterjelly>
+  <!-- This is the peanutbutterjelly element -->
+  I like sandwiches!
+</peanutbutterjelly>
+EOF
+
+# HTML comment wrap indented sections of code
 $output = $haml->render(<<'EOF');
 /
   %p This does not render...
@@ -61,6 +102,34 @@ EOF
 is($output, <<'EOF');
 <p>foo</p>
 <p>bar</p>
+EOF
+
+# Text::Haml Comments: Inline -# inside tag
+$output = $haml->render(<<'EOF');
+%div#foo
+  -# This is a comment
+  %p bar
+  %strong baz
+EOF
+is($output, <<'EOF');
+<div id='foo'>
+  <p>bar</p>
+  <strong>baz</strong>
+</div>
+EOF
+
+# Text::Haml Comments: Inline -# inside tag (does not add newline in last line)
+$output = $haml->render(<<'EOF');
+%div#foo
+  %p bar
+  %strong baz
+  -# This is a comment
+EOF
+is($output, <<'EOF');
+<div id='foo'>
+  <p>bar</p>
+  <strong>baz</strong>
+</div>
 EOF
 
 # Text::Haml Comments: Nested -#

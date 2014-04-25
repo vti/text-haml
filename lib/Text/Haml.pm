@@ -296,7 +296,7 @@ sub parse {
         }
 
         # HTML comment
-        if ($line =~ m/^\/(?:\[if (.*)?\])?(?: (.*))?/) {
+        if ($line =~ m/^\/(?:\[if (.*)?\])?(?: *(.*))?/) {
             $el->{type} = 'html_comment';
             $el->{if}   = $1 if $1;
             $el->{text} = $2 if $2;
@@ -616,6 +616,7 @@ EOF
                 && $prev_stack_el->{level} >= $el->{level})
             {
                 pop @$stack;
+                undef $prev_stack_el;
             }
             else {
                 next ELEM;
@@ -797,7 +798,8 @@ EOF
                 $output .= qq/ . "[if $el->{if}]>"/ if $el->{if};
 
                 if ($el->{text}) {
-                    $output .= qq/. " $el->{text} -->\n"/;
+                    $output .= '." ' . quotemeta($el->{text}) . ' ".'; 
+                    $output .= qq/"-->\n"/;
                 }
                 else {
                     $output .= qq/. "\n"/;
@@ -863,7 +865,7 @@ EOF
             $ending .= "-->";
         }
 
-        push @lines, qq|\$_H .= "$offset$ending\n";|;
+        push @lines, qq|\$_H .= "$offset$ending\n";| if $ending;
     }
 
     if ($lines[-1]) {
@@ -1268,6 +1270,8 @@ sub _doctype {
 1;
 __END__
 
+=encoding utf-8
+
 =head1 NAME
 
 Text::Haml - Haml Perl implementation
@@ -1509,6 +1513,28 @@ Perl-style is supported but not recommented, since your Haml template won't
 work with Ruby Haml implementation parser.
 
 $haml->render("%a{href => 'bar'}");
+
+=head2 Using with Data::Section::Simple
+
+When using the Data::Section::Simple, you need to unset the variable C<encoding> in the constructor or using the C<encoding> attribute of the Text::Haml:
+
+    use Data::Section::Simple qw/get_data_section/;
+    my $vpath = get_data_section;
+
+    my $haml = Text::Haml->new(cache => 0, path => $vpath, encoding => '');
+    # or
+    #my $haml = Text::Haml->new(cache => 0, path => $vpath);
+    #$haml->encoding(''); # encoding attribute
+
+    my $index = $haml->render_file('index.haml');
+    say $index;
+
+    __DATA__
+
+    @@ index.haml
+    %strong текст
+
+see L<https://metacpan.org/pod/Data::Section::Simple#utf8-pragma>
 
 =head1 DEVELOPMENT
 
