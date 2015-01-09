@@ -24,7 +24,7 @@ BEGIN {
             last;
         }
     }
-    *_DEFAULT_CACHE_DIR = sub () { $cache_dir };
+    use constant _DEFAULT_CACHE_DIR => $cache_dir;
 }
 
 my $ESCAPE = {
@@ -597,7 +597,7 @@ EOF
         $level -= 2 * $in_block if $in_block;
 
         my $offset = '';
-        $offset .= ' ' x $level;
+        $offset .= ' ' x $level if $level > 0;
 
         my $escape = '';
         if (   (!exists $el->{escape} && $self->escape_html)
@@ -631,7 +631,7 @@ EOF
             while (my $poped = pop @$stack) {
                 my $level = $poped->{level};
                 $level -= 2 * $in_block if $in_block;
-                my $poped_offset = ' ' x $level;
+                my $poped_offset = $level > 0 ? ' ' x $level : '';
 
                 my $ending = '';
                 if ($poped->{type} eq 'tag') {
@@ -965,7 +965,7 @@ sub _parse_interpolation {
 
     return '' unless @parts;
 
-    return '" . ' . join('.', map {s/\\\\#\\{/#\\{/; $_} @parts) . '."';
+    return '" . ' . join('.', map {s/\\\\#\\\{/#\\\{/; $_} @parts) . '."';
 }
 
 sub compile {
