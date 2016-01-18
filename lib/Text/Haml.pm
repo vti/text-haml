@@ -886,8 +886,13 @@ EOF
         _close_implicit_brace(\@lines) unless $el->{type} eq 'block';
     }
 
-    if ($lines[-1]) {
-        $lines[-1] =~ s/\n";$/";/ unless $last_empty_line;
+    if ($lines[-1] && !$last_empty_line) {
+        # usually (always?) there will be a closing '}' after the actual last .=
+        if ($lines[-2] && $lines[-1] eq '}') {
+            $lines[-2] =~ s/\n";$/";/;
+        } else {
+            $lines[-1] =~ s/\n";$/";/;
+        }
     }
 
     $code .= join("\n", @lines);
