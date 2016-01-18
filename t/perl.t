@@ -5,7 +5,7 @@ use warnings;
 
 use Text::Haml;
 
-use Test::More tests => 15;
+use Test::More tests => 16;
 
 my $haml = Text::Haml->new;
 my $output;
@@ -101,6 +101,29 @@ $output = $haml->render(<<'EOF');
    %li
      %foo
  - }
+%p End
+EOF
+is($output, <<'EOF');
+<ul>
+ <li>
+   <foo></foo>
+ </li>
+ <li>
+   <foo></foo>
+ </li>
+ <li>
+   <foo></foo>
+ </li>
+</ul>
+<p>End</p>
+EOF
+
+# same for loop, but utilising the new implicit bracing
+$output = $haml->render(<<'EOF');
+%ul
+ - foreach (1..3)
+   %li
+     %foo
 %p End
 EOF
 is($output, <<'EOF');

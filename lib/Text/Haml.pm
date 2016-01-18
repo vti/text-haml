@@ -530,6 +530,20 @@ sub _update_lineno {
     return;
 }
 
+sub _open_implicit_brace {
+    my ($lines) = @_;
+    push @$lines, '{';
+}
+
+sub _close_implicit_brace {
+    my ($lines) = @_;
+    if (scalar(@$lines) && $lines->[-1] eq '{') {
+        pop @$lines;
+    } else {
+        push @$lines, '}';
+    }
+}
+
 sub build {
     my $self = shift;
     my %vars = @_;
@@ -617,6 +631,7 @@ EOF
             {
                 pop @$stack;
                 undef $prev_stack_el;
+                _close_implicit_brace(\@lines);
             }
             else {
                 next ELEM;
@@ -644,6 +659,7 @@ EOF
 
                 if ($poped->{type} ne 'block') {
                     push @lines, qq|\$_H .= "$poped_offset$ending\n";|;
+                    _close_implicit_brace(\@lines);
                 }
 
                 last STACKEDBLK if $poped->{level} == $el->{level};
@@ -749,6 +765,7 @@ EOF
                 }
                 elsif (!$el->{autoclose}) {
                     push @$stack, $el;
+                    _open_implicit_brace(\@lines);
                 }
 
                 $output .= qq|. "\n"|;
@@ -804,6 +821,7 @@ EOF
                 else {
                     $output .= qq/. "\n"/;
                     push @$stack, $el;
+                    _open_implicit_brace(\@lines);
                 }
 
                 $output .= qq/;/;
@@ -812,6 +830,7 @@ EOF
 
             if ($el->{type} eq 'comment') {
                 push @$stack, $el;
+                _open_implicit_brace(\@lines);
                 last SWITCH;
             }
 
@@ -866,6 +885,7 @@ EOF
         }
 
         push @lines, qq|\$_H .= "$offset$ending\n";| if $ending;
+        _close_implicit_brace(\@lines) unless $el->{type} eq 'block';
     }
 
     if ($lines[-1]) {
