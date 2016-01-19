@@ -94,10 +94,10 @@ EOF
 
 # Hashref interpolation
 $output = $haml->render(<<'EOF');
-- my $people = {
--    Alice => { role => 'sender'    },
--    Bob   => { role => 'recipient' },
-- };
+- my $people = {                       |
+     Alice => { role => 'sender'    }, |
+     Bob   => { role => 'recipient' }, |
+  };                                   |
 %p Alice has the role of #{$people->{Alice}->{role}}. Bob has the role of #{$people->{Bob}->{role}}.
 %p Bob has the role of #{$people->{Bob}->{role}}. Alice has the role of #{$people->{Alice}->{role}}.
 EOF
@@ -108,10 +108,10 @@ EOF
 
 # Hashref interpolation inside filters
 $output = $haml->render(<<'EOF');
-- my $vars = { 
--   settings => { type => 'text/javascript' },
--   request => { uri_base => '/path/to' },
-- };
+- my $vars = { |
+    settings => { type => 'text/javascript' }, |
+    request => { uri_base => '/path/to' }, |
+  }; |
 :javascript
   !window.jQuery && document.write('<script type="#{$vars->{settings}->{type}}" src="#{$vars->{request}->{uri_base}}/javascripts/jquery.js"><\/script>')
 EOF

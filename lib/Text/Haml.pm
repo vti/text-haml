@@ -243,6 +243,7 @@ sub parse {
 
     my $level;
     my @multiline_el_queue;
+    my $multiline_code_el = undef;
     my @lines = split /\n/, $tmpl;
     push @lines, '' if $tmpl =~ m/\n$/;
     @lines = ('') if $tmpl eq "\n";
@@ -257,6 +258,11 @@ sub parse {
         }
 
         my $el = {level => $level, type => 'text', line => $line, lineno => $i+1};
+
+        if (defined $multiline_code_el && $line =~ /^[-!=%#.:]/) {
+            push @$tape, $multiline_code_el;
+            undef $multiline_code_el;
+        }
 
         # Haml comment
         if ($line =~ m/^$comment_token(?: (.*))?/) {
@@ -314,12 +320,25 @@ sub parse {
             next;
         }
 
-        # Block
-        if ($line =~ s/^- \s*(.*)//) {
+        # Block (note even the final multiline block must end in |)
+        if ($line =~ s/^- \s*(.*)(\s\|\s*)$// ||
+            $line =~ s/^- \s*(.*)// ||
+                (defined $multiline_code_el && $line =~ s/^(.*)(\s\|\s*)$//)) {
+
             $el->{type} = 'block';
+            
+            if ($2) {
+                $multiline_code_el ||= $el;
+                $multiline_code_el->{text} ||= '';
+                $multiline_code_el->{text} .= $1;
+
+                next;
+            }
+            
             $el->{text} = $1;
             push @$tape, $el;
             next;
+            
         }
 
         # Preserve whitespace
