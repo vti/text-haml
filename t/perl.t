@@ -5,7 +5,7 @@ use warnings;
 
 use Text::Haml;
 
-use Test::More tests => 16;
+use Test::More tests => 18;
 
 my $haml = Text::Haml->new;
 my $output;
@@ -224,8 +224,6 @@ is($output, <<'EOF');
 0
 
 EOF
-
-#warn $haml->code;
 
 # Inserting variables
 $output = $haml->render(<<'EOF', foo => 1, bar => 2);

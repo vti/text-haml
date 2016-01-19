@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 
-use Test::More tests => 10;
+use Test::More tests => 11;
 
 use Text::Haml;
 
@@ -94,10 +94,10 @@ EOF
 
 # Hashref interpolation
 $output = $haml->render(<<'EOF');
-- my $people = {
--    Alice => { role => 'sender'    },
--    Bob   => { role => 'recipient' },
-- };
+- my $people = {                       |
+     Alice => { role => 'sender'    }, |
+     Bob   => { role => 'recipient' }, |
+  };                                   |
 %p Alice has the role of #{$people->{Alice}->{role}}. Bob has the role of #{$people->{Bob}->{role}}.
 %p Bob has the role of #{$people->{Bob}->{role}}. Alice has the role of #{$people->{Alice}->{role}}.
 EOF
@@ -106,12 +106,34 @@ is($output, <<'EOF');
 <p>Bob has the role of recipient. Alice has the role of sender.</p>
 EOF
 
+# Seqeuntial multi-line perl blocks
+$output = $haml->render(<<'EOF');
+- my $people = {                       |
+     Alice => { role => 'sender'    }, |
+     Bob   => { role => 'recipient' }, |
+  };                                   |
+- my $foo = "Hello " . |
+  "World";             |
+- die unless 1;
+- die                             |
+    unless $foo eq 'Hello World'; |
+%p Alice has the role of #{$people->{Alice}->{role}}. Bob has the role of #{$people->{Bob}->{role}}.
+- die                                          |
+    unless $people->{Alice}{role} eq 'sender'; |
+%p Bob has the role of #{$people->{Bob}->{role}}. Alice has the role of #{$people->{Alice}->{role}}.
+EOF
+is($output, <<'EOF');
+<p>Alice has the role of sender. Bob has the role of recipient.</p>
+<p>Bob has the role of recipient. Alice has the role of sender.</p>
+EOF
+
+
 # Hashref interpolation inside filters
 $output = $haml->render(<<'EOF');
-- my $vars = { 
--   settings => { type => 'text/javascript' },
--   request => { uri_base => '/path/to' },
-- };
+- my $vars = { |
+    settings => { type => 'text/javascript' }, |
+    request => { uri_base => '/path/to' }, |
+  }; |
 :javascript
   !window.jQuery && document.write('<script type="#{$vars->{settings}->{type}}" src="#{$vars->{request}->{uri_base}}/javascripts/jquery.js"><\/script>')
 EOF
