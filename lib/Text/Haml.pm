@@ -657,9 +657,10 @@ EOF
 
                 if ($poped->{type} ne 'block') {
                     push @lines, qq|\$_H .= "$poped_offset$ending\n";|;
-                    _close_implicit_brace(\@lines);
                 }
 
+                _close_implicit_brace(\@lines);
+                
                 last STACKEDBLK if $poped->{level} == $el->{level};
             }
         }
@@ -795,6 +796,7 @@ EOF
             if ($el->{type} eq 'block') {
                 push @lines,  $el->{text};
                 push @$stack, $el;
+                _open_implicit_brace(\@lines);
 
                 if ($prev_el && $prev_el->{level} > $el->{level}) {
                     $in_block--;
@@ -883,7 +885,8 @@ EOF
         }
 
         push @lines, qq|\$_H .= "$offset$ending\n";| if $ending;
-        _close_implicit_brace(\@lines) unless $el->{type} eq 'block';
+
+        _close_implicit_brace(\@lines);
     }
 
     if ($lines[-1] && !$last_empty_line) {

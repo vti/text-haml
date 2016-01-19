@@ -142,6 +142,27 @@ is($output, <<'EOF');
 EOF
 
 $output = $haml->render(<<'EOF');
+ - foreach (1..3)
+   %p foo
+EOF
+is($output, <<'EOF');
+ <p>foo</p>
+ <p>foo</p>
+ <p>foo</p>
+EOF
+
+$output = $haml->render(<<'EOF');
+ - foreach (1..3)
+   %br/
+EOF
+is($output, <<'EOF');
+ <br />
+ <br />
+ <br />
+EOF
+
+
+$output = $haml->render(<<'EOF');
 %ul
   - foreach (1..1) {
     %li
