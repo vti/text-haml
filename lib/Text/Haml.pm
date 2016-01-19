@@ -80,6 +80,7 @@ sub new {
     $attrs->{encoding}     = 'utf-8';
     $attrs->{escape_html}  = 1;
     $attrs->{helpers}      = {};
+    $attrs->{helpers_options} = {};
     $attrs->{format}       = 'xhtml';
     $attrs->{prepend}      = '';
     $attrs->{append}       = '';
@@ -142,6 +143,7 @@ sub escape_html   { @_ > 1 ? $_[0]->{escape_html}   = $_[1] : $_[0]->{escape_htm
 sub code          { @_ > 1 ? $_[0]->{code}          = $_[1] : $_[0]->{code} }
 sub compiled      { @_ > 1 ? $_[0]->{compiled}      = $_[1] : $_[0]->{compiled} }
 sub helpers       { @_ > 1 ? $_[0]->{helpers}       = $_[1] : $_[0]->{helpers} }
+sub helpers_options { @_ > 1 ? $_[0]->{helpers_options} = $_[1] : $_[0]->{helpers_options} }
 sub filters       { @_ > 1 ? $_[0]->{filters}       = $_[1] : $_[0]->{filters} }
 sub prepend       { @_ > 1 ? $_[0]->{prepend}       = $_[1] : $_[0]->{prepend} }
 sub append        { @_ > 1 ? $_[0]->{append}        = $_[1] : $_[0]->{append} }
@@ -170,9 +172,10 @@ our @AUTOCLOSE = (qw/meta img link br hr input area param col base/);
 
 sub add_helper {
     my $self = shift;
-    my ($name, $code) = @_;
+    my ($name, $code, %options) = @_;
 
     $self->helpers->{$name} = $code;
+    $self->helpers_options->{$name} = \%options;
 }
 
 sub add_filter {
@@ -564,24 +567,49 @@ EOF
 
     $ESCAPE =~ s/\n//g;
 
-    my $namespace = $self->namespace || ref($self) . '::template';
+    # ensure namespace is set so that (for now) helpers
+    # can access outs & outs_raw (until we correctly allow
+    # helpers in `=` lines to capture their blocks eg. for `surrounds`
+    
+    if (! $self->namespace) {
+        $self->namespace(ref($self) . '::template');
+    }
+
+    my $namespace = $self->namespace;
     $code .= qq/package $namespace;/;
 
-    $code .= qq/sub { my \$_H = ''; $ESCAPE;/;
+    $code .= qq/sub { my \$_H = ''; $ESCAPE; /;
 
     $code .= qq/my \$self = shift;/;
+    $code .= qq/\$${namespace}::__self = \$self;/;
 
     $code .= qq/my \%____vars = \@_;/;
 
     $code .= qq/no strict 'refs'; no warnings 'redefine';/;
 
+    # using [1] since when called with arrow from namespace, [0] will be the namespace
+    $code .= qq/*${namespace}::outs = sub { \$_H .= escape(\$_[1]) };/;
+    $code .= qq/*${namespace}::outs_raw = sub { \$_H .= \$_[1] };/;
+    $code .= qq/*${namespace}::out_chomp = sub { chomp \$_H };/;
+
     # Install helpers
     for my $name (sort keys %{$self->helpers}) {
         next unless $name =~ m/^\w+$/;
 
-        $code .= "sub $name;";
-        $code .= " *$name = sub { \$self";
-        $code .= "->helpers->{'$name'}->(\$self->helpers_arg, \@_) };";
+        my $options = $self->{helpers_options}{$name} || {};
+
+        # allow bareword helpers and block capturing with optional helper prototypes
+        my $prototype = $options->{prototype};
+        $prototype = defined $prototype ? "($prototype)" : '';
+
+        # this option allows per-helper overriding of the helper_arg, important for builtin
+        # helpers to be safe in assuming the arg is self
+        my $helper_arg_code = $options->{arg_force_self} ? "\$${namespace}::__self" : "\$${namespace}::__self->helpers_arg";
+
+        # sub must be defined inside BEGIN {} for the prototype to be ready before main helper code is
+        # compiled
+        $code .= "BEGIN { \*${namespace}::${name} = sub $prototype { ";
+        $code .= "\$${namespace}::__self->helpers->{'$name'}->($helper_arg_code, \@_) }; } ";
     }
 
     # Install variables
@@ -803,7 +831,7 @@ EOF
 
             if ($el->{type} eq 'block') {
                 _open_implicit_brace(\@lines);
-                push @lines,  $el->{text};
+                push @lines,  ';' . $el->{text};
                 push @$stack, $el;
                 _open_implicit_brace(\@lines);
 
