@@ -333,8 +333,6 @@ sub parse {
         if ($line =~ m/^(?:$tag_start
             |$class_start
             |$id_start
-            |$attributes_start[^$attributes_start]
-            |$attributes_start2
             )/x
           )
         {
@@ -530,6 +528,20 @@ sub _update_lineno {
     return;
 }
 
+sub _open_implicit_brace {
+    my ($lines) = @_;
+    push @$lines, '{';
+}
+
+sub _close_implicit_brace {
+    my ($lines) = @_;
+    if (scalar(@$lines) && $lines->[-1] eq '{') {
+        pop @$lines;
+    } else {
+        push @$lines, '}';
+    }
+}
+
 sub build {
     my $self = shift;
     my %vars = @_;
@@ -617,6 +629,7 @@ EOF
             {
                 pop @$stack;
                 undef $prev_stack_el;
+                _close_implicit_brace(\@lines);
             }
             else {
                 next ELEM;
@@ -646,6 +659,8 @@ EOF
                     push @lines, qq|\$_H .= "$poped_offset$ending\n";|;
                 }
 
+                _close_implicit_brace(\@lines);
+                
                 last STACKEDBLK if $poped->{level} == $el->{level};
             }
         }
@@ -749,6 +764,7 @@ EOF
                 }
                 elsif (!$el->{autoclose}) {
                     push @$stack, $el;
+                    _open_implicit_brace(\@lines);
                 }
 
                 $output .= qq|. "\n"|;
@@ -780,6 +796,7 @@ EOF
             if ($el->{type} eq 'block') {
                 push @lines,  $el->{text};
                 push @$stack, $el;
+                _open_implicit_brace(\@lines);
 
                 if ($prev_el && $prev_el->{level} > $el->{level}) {
                     $in_block--;
@@ -804,6 +821,7 @@ EOF
                 else {
                     $output .= qq/. "\n"/;
                     push @$stack, $el;
+                    _open_implicit_brace(\@lines);
                 }
 
                 $output .= qq/;/;
@@ -812,6 +830,7 @@ EOF
 
             if ($el->{type} eq 'comment') {
                 push @$stack, $el;
+                _open_implicit_brace(\@lines);
                 last SWITCH;
             }
 
@@ -866,10 +885,17 @@ EOF
         }
 
         push @lines, qq|\$_H .= "$offset$ending\n";| if $ending;
+
+        _close_implicit_brace(\@lines);
     }
 
-    if ($lines[-1]) {
-        $lines[-1] =~ s/\n";$/";/ unless $last_empty_line;
+    if ($lines[-1] && !$last_empty_line) {
+        # usually (always?) there will be a closing '}' after the actual last .=
+        if ($lines[-2] && $lines[-1] eq '}') {
+            $lines[-2] =~ s/\n";$/";/;
+        } else {
+            $lines[-1] =~ s/\n";$/";/;
+        }
     }
 
     $code .= join("\n", @lines);

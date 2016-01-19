@@ -5,7 +5,7 @@ use warnings;
 
 use Text::Haml;
 
-use Test::More tests => 6;
+use Test::More tests => 7;
 
 my $haml = Text::Haml->new;
 
@@ -25,6 +25,25 @@ is($output, <<'EOF');
   <whiz>
     Wow this is cool!
     <b>bold</b>
+  </whiz>
+</gee>
+EOF
+
+# bug with bare open bracket/brace
+$output = $haml->render(<<'EOF');
+%gee
+  %whiz
+    (
+  %whiz
+    {
+EOF
+is($output, <<'EOF');
+<gee>
+  <whiz>
+    (
+  </whiz>
+  <whiz>
+    {
   </whiz>
 </gee>
 EOF
