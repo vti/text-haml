@@ -530,7 +530,11 @@ sub _update_lineno {
 
 sub _open_implicit_brace {
     my ($lines) = @_;
-    push @$lines, '{';
+        if (scalar(@$lines) && $lines->[-1] eq '}') {
+        pop @$lines;
+    } else {
+        push @$lines, '{';
+    }
 }
 
 sub _close_implicit_brace {
@@ -661,6 +665,10 @@ EOF
 
                 _close_implicit_brace(\@lines);
                 
+                if ($poped->{type} eq 'block') {
+                    _close_implicit_brace(\@lines);
+                }
+
                 last STACKEDBLK if $poped->{level} == $el->{level};
             }
         }
@@ -794,6 +802,7 @@ EOF
             }
 
             if ($el->{type} eq 'block') {
+                _open_implicit_brace(\@lines);
                 push @lines,  $el->{text};
                 push @$stack, $el;
                 _open_implicit_brace(\@lines);
@@ -863,7 +872,14 @@ EOF
         }    #end:SWITCH
     }    #end:ELEM
     continue {
+
+        # by bracing the content blocks, we will continue any existing block at the same level.
+        # this is important eg. if previously at this level the template has declared a `my`
+        # variable.
+        
+        _open_implicit_brace(\@lines);
         push @lines, '$_H .= ' . $output if $output;
+        _close_implicit_brace(\@lines);
         $output = '';
         $count++;
     }    #ELEM
@@ -872,7 +888,7 @@ EOF
     $last_empty_line = 1
       if $self->tape->[-1] && $self->tape->[-1]->{line} eq '';
 
-    # Close remaining content blocks, last-seen first
+    # Close remaining conten tblocks, last-seen first
     foreach my $el (reverse @$stack) {
         my $offset = ' ' x $el->{level};
         my $ending = '';
@@ -887,6 +903,10 @@ EOF
         push @lines, qq|\$_H .= "$offset$ending\n";| if $ending;
 
         _close_implicit_brace(\@lines);
+        if ($el->{type} eq 'block') {
+            _close_implicit_brace(\@lines);
+        }
+
     }
 
     if ($lines[-1] && !$last_empty_line) {
