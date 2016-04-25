@@ -2,6 +2,24 @@ Revision history for perl module Text::Haml
 
 {{$NEXT}}
 
+0.990117 2016-04-25T09:25:07Z
+
+    All changes by Mark Aufflick.
+
+    [Improvements]
+    - Added test to ensure sequential multiline code blocks work
+    - Since we no longer allow statement continuation across `-` code block lines, implemented support for multiline
+      code blocks.
+    - Fair attempt at block capturing helpers
+    - Now bracing whole level, including blocks which is a precursor to allowing helpers to enclose blocks
+    - Need implicit braces around block contents also
+    - Eliminate need for closing brace block by implicitly adding open/close braces at level changes
+
+    [Fixes]
+    - Fixed regression introduced by implicit bracing where final trailing newlines were no longer suppressed where they
+      should have been.
+    - Fixed bogus <> and </> from wrapping lines beginning with ( or {
+
 0.990116 2014-04-25T10:06:26Z
 
     [Documentation]

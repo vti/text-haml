@@ -4,9 +4,9 @@
       "Viacheslav Tykhanovskyi, C<vti@cpan.org>."
    ],
    "dynamic_config" : 0,
-   "generated_by" : "Minilla/v0.14.1, CPAN::Meta::Converter version 2.120921",
+   "generated_by" : "Minilla/v2.5.0, CPAN::Meta::Converter version 2.150005",
    "license" : [
-      "unknown"
+      "artistic_2"
    ],
    "meta-spec" : {
       "url" : "http://search.cpan.org/perldoc?CPAN::Meta::Spec",
@@ -28,8 +28,6 @@
    "prereqs" : {
       "configure" : {
          "requires" : {
-            "CPAN::Meta" : "0",
-            "CPAN::Meta::Prereqs" : "0",
             "Module::Build" : "0.38"
          }
       },
@@ -67,7 +65,7 @@
          "web" : "https://github.com/vti/text-haml"
       }
    },
-   "version" : "0.990116",
+   "version" : "0.990117",
    "x_contributors" : [
       "enosis <enosis@github.com>",
       "rightgo09 <skyarrow09@gmail.com>",
@@ -80,6 +78,9 @@
       "Hyungsuk Hong <aanoaa@gmail.com>",
       "Keedi Kim <keedi.k@gmail.com>",
       "TheAthlete <theathlet@yandex.ru>",
-      "vti <viacheslav.t@gmail.com>"
-   ]
+      "Mark Aufflick <mark@aufflick.com>",
+      "Viacheslav Tykhanovskyi <viacheslav.t@gmail.com>",
+      "vti <vti@clarive.com>"
+   ],
+   "x_serialization_backend" : "JSON::PP version 2.27300"
 }

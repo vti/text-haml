@@ -296,6 +296,8 @@ Jason Younker
 
 TheAthlete
 
+Mark Aufflick (aufflick)
+
 # COPYRIGHT AND LICENSE
 
 Copyright (C) 2009-2013, Viacheslav Tykhanovskyi.
