@@ -1385,11 +1385,11 @@ Text::Haml - Haml Perl implementation
 =head1 DESCRIPTION
 
 L<Text::Haml> implements Haml
-L<http://haml-lang.com/docs/yardoc/file.HAML_REFERENCE.html> specification.
+L<http://haml.info/docs/yardoc/file.REFERENCE.html> specification.
 
 L<Text::Haml> passes specification tests written by Norman Clarke
-http://github.com/norman/haml-spec and supports only cross-language Haml
-features. Do not expect Ruby specific things to work.
+https://github.com/haml/haml-spec and supports only cross-language Haml
+features. Do not expect ruby or Rails specific extensions to work.
 
 =head1 ATTRIBUTES
 
