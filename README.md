@@ -18,11 +18,11 @@ Text::Haml - Haml Perl implementation
 # DESCRIPTION
 
 [Text::Haml](https://metacpan.org/pod/Text::Haml) implements Haml
-[http://haml-lang.com/docs/yardoc/file.HAML\_REFERENCE.html](http://haml-lang.com/docs/yardoc/file.HAML_REFERENCE.html) specification.
+[http://haml.info/docs/yardoc/file.REFERENCE.html](http://haml.info/docs/yardoc/file.REFERENCE.html) specification.
 
 [Text::Haml](https://metacpan.org/pod/Text::Haml) passes specification tests written by Norman Clarke
-http://github.com/norman/haml-spec and supports only cross-language Haml
-features. Do not expect Ruby specific things to work.
+https://github.com/haml/haml-spec and supports only cross-language Haml
+features. Do not expect ruby or Rails specific extensions to work.
 
 # ATTRIBUTES
 
