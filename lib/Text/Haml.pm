@@ -15,16 +15,16 @@ use Digest::MD5;
 our $VERSION = '0.990117';
 
 use constant CHUNK_SIZE => 4096;
+use constant _DEFAULT_CACHE_DIR => '.text_haml_cache';
+my $cache_dir;
 
 BEGIN {
-    my $cache_dir = '.text_haml_cache';
     for my $dir ($ENV{HOME}, File::Spec->tmpdir) {
         if (defined($dir) && -d $dir && -w _) {
-            $cache_dir = File::Spec->catdir($dir, '.text_haml_cache');
+            $cache_dir = File::Spec->catdir($dir, _DEFAULT_CACHE_DIR);
             last;
         }
     }
-    use constant _DEFAULT_CACHE_DIR => $cache_dir;
 }
 
 my $ESCAPE = {
