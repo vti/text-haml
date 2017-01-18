@@ -4,7 +4,7 @@
       "Viacheslav Tykhanovskyi, C<vti@cpan.org>."
    ],
    "dynamic_config" : 0,
-   "generated_by" : "Minilla/v2.5.0, CPAN::Meta::Converter version 2.150005",
+   "generated_by" : "Minilla/v3.0.4, CPAN::Meta::Converter version 2.150010",
    "license" : [
       "artistic_2"
    ],
@@ -28,7 +28,7 @@
    "prereqs" : {
       "configure" : {
          "requires" : {
-            "Module::Build" : "0.38"
+            "Module::Build::Tiny" : "0.035"
          }
       },
       "develop" : {
@@ -65,7 +65,7 @@
          "web" : "https://github.com/vti/text-haml"
       }
    },
-   "version" : "0.990117",
+   "version" : "0.990118",
    "x_contributors" : [
       "enosis <enosis@github.com>",
       "rightgo09 <skyarrow09@gmail.com>",
@@ -79,8 +79,9 @@
       "Keedi Kim <keedi.k@gmail.com>",
       "TheAthlete <theathlet@yandex.ru>",
       "Mark Aufflick <mark@aufflick.com>",
-      "Viacheslav Tykhanovskyi <viacheslav.t@gmail.com>",
-      "vti <vti@clarive.com>"
+      "vti <vti@clarive.com>",
+      "Graham Todd <gtodd@iciti.ca>",
+      "vti <viacheslav.t@gmail.com>"
    ],
-   "x_serialization_backend" : "JSON::PP version 2.27300"
+   "x_serialization_backend" : "JSON::PP version 2.27300_01"
 }

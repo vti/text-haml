@@ -12,7 +12,7 @@ use File::Basename ();
 use URI::Escape ();
 use Digest::MD5;
 
-our $VERSION = '0.990117';
+our $VERSION = '0.990118';
 
 use constant CHUNK_SIZE => 4096;
 use constant _DEFAULT_CACHE_DIR => '.text_haml_cache';

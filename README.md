@@ -298,9 +298,11 @@ TheAthlete
 
 Mark Aufflick (aufflick)
 
+Graham Todd (grtodd)
+
 # COPYRIGHT AND LICENSE
 
-Copyright (C) 2009-2013, Viacheslav Tykhanovskyi.
+Copyright (C) 2009-2017, Viacheslav Tykhanovskyi.
 
 This program is free software, you can redistribute it and/or modify it under
 the terms of the Artistic License version 2.0.

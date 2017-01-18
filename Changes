@@ -2,6 +2,12 @@ Revision history for perl module Text::Haml
 
 {{$NEXT}}
 
+0.990118 2017-01-18T18:39:25Z
+
+    [Fixes]
+    - Update HAML reference links in POD (grtodd)
+    - Update HAML reference links in README (grtodd)
+
 0.990117 2016-04-25T09:25:07Z
 
     All changes by Mark Aufflick.
